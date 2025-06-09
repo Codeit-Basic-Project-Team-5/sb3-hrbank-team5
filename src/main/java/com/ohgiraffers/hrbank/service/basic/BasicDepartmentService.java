@@ -68,11 +68,10 @@ public class BasicDepartmentService implements DepartmentService {
      * 수정된 Department
      */
     @Override
-    public Department update(DepartmentUpdateRequest request) {
-        if(!departmentRepository.existsById(request.id())){
+    public Department update(Long id,DepartmentUpdateRequest request) {
+        if(!departmentRepository.existsById(id)){
             throw new IllegalArgumentException("존재하지 않는 부서입니다.");
         }
-        Long id = request.id();
         String name = request.name();
         if (departmentRepository.existsByName(name)){
             throw new IllegalArgumentException("이미 존재하는 이름입니다.");

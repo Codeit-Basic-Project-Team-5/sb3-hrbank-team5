@@ -12,7 +12,7 @@ public interface DepartmentService {
     List<DepartmentDto> findAll();
     DepartmentDto findById(Long id);
 
-    Department update(DepartmentUpdateRequest request);
+    Department update(Long id, DepartmentUpdateRequest request);
 
     void delete(Long id);
 }
