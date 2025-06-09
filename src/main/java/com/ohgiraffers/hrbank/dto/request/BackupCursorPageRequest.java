@@ -3,7 +3,7 @@ package com.ohgiraffers.hrbank.dto.request;
 import com.ohgiraffers.hrbank.entity.StatusType;
 import java.time.Instant;
 
-public record CursorPageRequest (
+public record BackupCursorPageRequest(
      String worker,
      StatusType status,
      Instant startedAtFrom,

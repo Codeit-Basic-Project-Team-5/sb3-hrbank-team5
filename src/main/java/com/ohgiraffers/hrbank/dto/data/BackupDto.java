@@ -6,14 +6,13 @@ import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
 
-@Setter
-@Getter
-@RequiredArgsConstructor
-public class BackupDto {
-    Long id;
-    String worker;
-    Instant startedAt;
-    Instant endedAt;
-    StatusType status;
-    Long fileId;
-}
+
+public record BackupDto (
+    Long id,
+    String worker,
+    Instant startedAt,
+    Instant endedAt,
+    StatusType status,
+    Long fileId,
+    )
+{}
