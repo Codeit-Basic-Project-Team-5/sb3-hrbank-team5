@@ -11,6 +11,6 @@ public interface EmployeeMapper {
     @Mapping(target = "departmentId", source = "department.id")
     @Mapping(target = "departmentName", source = "department.name")
     @Mapping(target = "status", source = "status.statusName")
-    @Mapping(target = "profileImageId", constant = "1L")    // 임시로 1L (나중에 실제 프로필 이미지 구현 시 수정)
+    @Mapping(target = "profileImageId", source = "profileImage.id")
     EmployeeDto toDto(Employee employee);
 }

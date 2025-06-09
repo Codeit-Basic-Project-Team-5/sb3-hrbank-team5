@@ -10,6 +10,7 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
+import jakarta.persistence.OneToOne;
 import jakarta.persistence.Table;
 import java.time.LocalDate;
 import java.util.ArrayList;
@@ -57,9 +58,11 @@ public class Employee {
     @Column(name = "status", nullable = false, length = 10)
     private EmployeeStatus status;
 
-//    private File profileImage;
+    @OneToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "profile_image_id")
+    private File profileImage;
 
-    public Employee(String name, String email, String employeeNumber, Department department, String position, LocalDate hireDate) {
+    public Employee(String name, String email, String employeeNumber, Department department, String position, LocalDate hireDate, File profileImage) {
         this.name = Objects.requireNonNull(name, "Name must not be null");
         this.email = Objects.requireNonNull(email, "Email must not be null");
         this.employeeNumber = employeeNumber;
@@ -67,9 +70,10 @@ public class Employee {
         this.position = position;
         this.hireDate = hireDate;
         this.status = EmployeeStatus.ACTIVE;
+        this.profileImage = profileImage;
     }
 
-    public void update(String newName, String newEmail, Department newDepartment, String newPosition, LocalDate newHireDate, EmployeeStatus newStatus) {
+    public void update(String newName, String newEmail, Department newDepartment, String newPosition, LocalDate newHireDate, EmployeeStatus newStatus, File newProfileImage) {
         if (newName != null && !newName.equals(this.name)) {
             this.name = newName;
         }
@@ -87,6 +91,9 @@ public class Employee {
         }
         if (newStatus != null && !newStatus.equals(this.status)) {
             this.status = newStatus;
+        }
+        if (newProfileImage != null) {
+            this.profileImage = newProfileImage;
         }
     }
 }
