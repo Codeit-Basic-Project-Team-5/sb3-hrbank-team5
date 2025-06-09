@@ -13,6 +13,6 @@ public record BackupDto (
     Instant startedAt,
     Instant endedAt,
     StatusType status,
-    Long fileId,
+    Long fileId
     )
 {}
