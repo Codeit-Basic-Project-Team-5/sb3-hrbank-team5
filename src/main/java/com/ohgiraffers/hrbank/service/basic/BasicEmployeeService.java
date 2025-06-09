@@ -75,4 +75,12 @@ public class BasicEmployeeService implements EmployeeService {
         employeeRepository.deleteById(employeeId);
     }
 
+    @Override
+    public EmployeeDto find(Long employeeId) {
+        Employee employee = employeeRepository.findById(employeeId)
+            .orElseThrow(() -> new NoSuchElementException("Employee with id " + employeeId + " not found"));
+
+        return employeeMapper.toDto(employee);
+    }
+
 }

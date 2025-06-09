@@ -4,6 +4,7 @@ import com.ohgiraffers.hrbank.dto.data.EmployeeDto;
 import com.ohgiraffers.hrbank.dto.request.EmployeeCreateRequest;
 import com.ohgiraffers.hrbank.dto.request.EmployeeUpdateRequest;
 import com.ohgiraffers.hrbank.service.EmployeeService;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
@@ -11,6 +12,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -65,4 +67,16 @@ public class EmployeeController {
             .status(HttpStatus.NO_CONTENT)
             .build();
     }
+
+    /**
+     * 직원 정보 상세 조회
+     */
+    @GetMapping(path = "{employeeId}")
+    public ResponseEntity<EmployeeDto> find(@PathVariable("employeeId") Long employeeId) {
+        EmployeeDto employee = employeeService.find(employeeId);
+        return ResponseEntity
+            .status(HttpStatus.OK)
+            .body(employee);
+    }
+
 }
