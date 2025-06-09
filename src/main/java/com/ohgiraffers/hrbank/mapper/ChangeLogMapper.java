@@ -1,7 +1,7 @@
 package com.ohgiraffers.hrbank.mapper;
 
 import com.ohgiraffers.hrbank.dto.data.ChangeLogDiffDto;
-import com.ohgiraffers.hrbank.dto.request.ChangeLogRequestDto;
+import com.ohgiraffers.hrbank.dto.request.ChangeLogRequest;
 import com.ohgiraffers.hrbank.entity.ChangeLog;
 import com.ohgiraffers.hrbank.entity.ChangeLogDiff;
 import java.util.List;
@@ -18,7 +18,7 @@ public interface ChangeLogMapper {
     @Mapping(target = "ipAddress", ignore = true)
     @Mapping(target = "updatedAt", expression = "java(java.time.Instant.now())")
     @Mapping(target = "diffs", ignore = true)
-    ChangeLog toEntity(ChangeLogRequestDto dto);
+    ChangeLog toEntity(ChangeLogRequest dto);
 
     // ChangeLogDiffDto → ChangeLogDiff 매핑
     @Mapping(target = "id", ignore = true)
