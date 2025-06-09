@@ -4,11 +4,9 @@ import com.ohgiraffers.hrbank.dto.data.ChangeLogDiffDto;
 import java.util.List;
 import lombok.Builder;
 
-
-@Builder
-public record ChangeLogRequestDto(
+public record ChangeLogRequest(
     String type,
-    String employee_id,
+    String employeeId,
     String memo,
     List<ChangeLogDiffDto> diffs
 ) {
