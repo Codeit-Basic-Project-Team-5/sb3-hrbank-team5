@@ -8,7 +8,9 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
+import java.time.Instant;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -38,7 +40,7 @@ public class ChangeLog {
     private String ipAddress;
 
     @Column(name = "updated_at", nullable = false)
-    private LocalDateTime updatedAt;
+    private Instant updatedAt;
 
     @Column(length = 50)
     private String memo;
@@ -48,5 +50,5 @@ public class ChangeLog {
         cascade = CascadeType.ALL,
         orphanRemoval = true
     )
-    private List<ChangeLogDiff> diffs;
+    private List<ChangeLogDiff> diffs = new ArrayList<>();
 }
