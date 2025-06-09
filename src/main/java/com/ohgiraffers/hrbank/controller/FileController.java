@@ -25,6 +25,7 @@ import org.springframework.web.multipart.MultipartFile;
 public class FileController {
     private final FileService fileService;
 
+    //테스트용
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<Long> upload(@RequestPart("file") MultipartFile multipartFile) {
         try {

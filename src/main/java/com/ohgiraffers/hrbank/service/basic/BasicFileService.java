@@ -19,6 +19,7 @@ public class BasicFileService implements FileService {
     private final FileRepository fileRepository;
     private final FileStorage fileStorage;
 
+    @Transactional
     @Override
     public File create(FileCreateRequest fileCreateRequest) {
         byte[] bytes = fileCreateRequest.bytes();

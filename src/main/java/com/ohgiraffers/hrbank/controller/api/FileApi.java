@@ -26,7 +26,5 @@ public interface FileApi {
         @ApiResponse(responseCode = "404", description = "파일을 찾을 수 없음"),
         @ApiResponse(responseCode = "500", description = "서버 오류")
     })
-    ResponseEntity<Resource> download(
-        @Parameter(description = "파일 ID") Long id
-    );
+    ResponseEntity<Resource> download(@Parameter(description = "파일 ID") Long id);
 }
