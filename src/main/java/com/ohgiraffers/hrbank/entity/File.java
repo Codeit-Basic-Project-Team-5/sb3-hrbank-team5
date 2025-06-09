@@ -12,15 +12,10 @@ import lombok.NoArgsConstructor;
 @Entity
 @Table(name = "files")
 @NoArgsConstructor
+@AllArgsConstructor
 @Getter
 public class File {
-
-    public File(String name, String type, Long size) {
-        this.name = name;
-        this.type = type;
-        this.size = size;
-    }
-
+  
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "id", updatable = false, nullable = false, columnDefinition = "UUID")
