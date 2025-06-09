@@ -1,6 +1,6 @@
 package com.ohgiraffers.hrbank.service.basic;
 
-import com.ohgiraffers.hrbank.dto.request.ChangeLogRequestDto;
+import com.ohgiraffers.hrbank.dto.request.ChangeLogRequest;
 import com.ohgiraffers.hrbank.entity.ChangeLog;
 import com.ohgiraffers.hrbank.entity.ChangeLogDiff;
 import com.ohgiraffers.hrbank.entity.Employee;
@@ -26,17 +26,16 @@ public class BasicChangeLogService implements ChangeLogService {
     private final EmployeeRepository employeeRepository;
     private final ChangeLogMapper changeLogMapper;
 
-
-    public Long registerChangeLog(ChangeLogRequestDto dto, HttpServletRequest request) {
-        Employee emp = employeeRepository.findByEmployeeNumber(dto.employee_id())
-            .orElseThrow(() -> new NoSuchElementException(dto.employee_id() + " 사원번호는 존재하지 않습니다."));
+    @Override
+    public Long registerChangeLog(ChangeLogRequest dto, HttpServletRequest request) {
+        Employee emp = employeeRepository.findByEmployeeNumber(dto.employeeId())
+            .orElseThrow(() -> new NoSuchElementException(dto.employeeId() + " 사원번호는 존재하지 않습니다."));
 
         String ipAddress = getIpAddress(request);
 
         ChangeLog changeLog = changeLogMapper.toEntity(dto);
-        changeLog.setEmployeeId(emp.getId().intValue());
+        changeLog.setEmployeeId(emp.getEmployeeNumber());
         changeLog.setIpAddress(ipAddress);
-
 
         List<ChangeLogDiff> diffEntities = changeLogMapper.toDiffEntityList(changeLog, dto.diffs());
         changeLog.setDiffs(diffEntities);
@@ -46,6 +45,7 @@ public class BasicChangeLogService implements ChangeLogService {
         return changeLog.getId();
     }
 
+    @Override
     //IP주소 받는 메서드
     public String getIpAddress(HttpServletRequest request) {
         String ipAddress = request.getHeader("X-Forwarded=For");
