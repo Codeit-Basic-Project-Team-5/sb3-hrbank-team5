@@ -12,10 +12,14 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Objects;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import org.springframework.data.annotation.CreatedDate;
 
 @Entity
 @Table(name = "employees")
@@ -45,6 +49,7 @@ public class Employee {
     @Column(name = "position", nullable = false, length = 50)
     private String position;
 
+    @CreatedDate
     @Column(name = "hire_date", nullable = false)
     private LocalDate hireDate;
 
@@ -53,4 +58,14 @@ public class Employee {
     private EmployeeStatus status;
 
 //    private File profileImage;
+
+    public Employee(String name, String email, String employeeNumber, Department department, String position, LocalDate hireDate) {
+        this.name = Objects.requireNonNull(name, "Name must not be null");
+        this.email = Objects.requireNonNull(email, "Email must not be null");
+        this.employeeNumber = employeeNumber;
+        this.department = department;
+        this.position = position;
+        this.hireDate = hireDate;
+        this.status = EmployeeStatus.ACTIVE;
+    }
 }
