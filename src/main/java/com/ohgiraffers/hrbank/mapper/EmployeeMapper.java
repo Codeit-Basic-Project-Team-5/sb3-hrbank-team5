@@ -1,22 +1,16 @@
 package com.ohgiraffers.hrbank.mapper;
 
-import com.ohgiraffers.hrbank.dto.response.EmployeeResponse;
+import com.ohgiraffers.hrbank.dto.data.EmployeeDto;
 import com.ohgiraffers.hrbank.entity.Employee;
+import org.mapstruct.Mapper;
+import org.mapstruct.Mapping;
 
-public class EmployeeMapper {
+@Mapper(componentModel = "spring")
+public interface EmployeeMapper {
 
-    public static EmployeeResponse toResponse(Employee employee) {
-        return EmployeeResponse.builder()
-            .id(employee.getId())
-            .name(employee.getName())
-            .email(employee.getEmail())
-            .employeeNumber(employee.getEmployeeNumber())
-//            .department(employee.getDepartment())
-            .position(employee.getPosition())
-            .hireDate(employee.getHireDate())
-            .status(employee.getStatus())
-//            .프로필 이미지
-            .build();
-    }
-
+    @Mapping(target = "departmentId", source = "department.id")
+    @Mapping(target = "departmentName", source = "department.name")
+    @Mapping(target = "status", source = "status.statusName")
+    @Mapping(target = "profileImageId", source = "profileImage.id")
+    EmployeeDto toDto(Employee employee);
 }
