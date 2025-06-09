@@ -9,5 +9,5 @@ public interface EmployeeService {
 //    EmployeeDto find(Long employeeId);
 //    List<EmployeeDto> findAll();
 //    EmployeeDto update(Long employeeId, EmployeeCreateRequest employeeUpdateRequest);
-//    void delete(Long employeeId);
+    void delete(Long employeeId);
 }

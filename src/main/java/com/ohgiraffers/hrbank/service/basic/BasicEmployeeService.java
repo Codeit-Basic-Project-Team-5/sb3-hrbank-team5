@@ -11,6 +11,7 @@ import com.ohgiraffers.hrbank.repository.EmployeeRepository;
 import com.ohgiraffers.hrbank.service.EmployeeService;
 import java.time.LocalDate;
 import java.util.NoSuchElementException;
+import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -40,6 +41,15 @@ public class BasicEmployeeService implements EmployeeService {
        employeeRepository.save(employee);
 
         return employeeMapper.toDto(employee);
+    }
+
+    @Override
+    public void delete(Long employeeId) {
+        if (!employeeRepository.existsById(employeeId)) {
+            throw new NoSuchElementException("Employee with id " + employeeId + " not found");
+        }
+
+        employeeRepository.deleteById(employeeId);
     }
 
 }
