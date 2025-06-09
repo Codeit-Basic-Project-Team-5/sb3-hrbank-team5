@@ -34,7 +34,7 @@ public class ChangeLog {
     private String type;
 
     @Column(name = "employee_id", nullable = false)
-    private int employeeId;
+    private String employeeId;
 
     @Column(name = "ip_address", length = 50)
     private String ipAddress;
@@ -51,4 +51,14 @@ public class ChangeLog {
         orphanRemoval = true
     )
     private List<ChangeLogDiff> diffs = new ArrayList<>();
+
+    public void setDiffs(List<ChangeLogDiff> diffs) {
+        this.diffs.clear();
+        if (diffs != null) {
+            diffs.forEach(d -> {
+                d.setChangeLog(this);
+                this.diffs.add(d);
+            });
+        }
+    }
 }
