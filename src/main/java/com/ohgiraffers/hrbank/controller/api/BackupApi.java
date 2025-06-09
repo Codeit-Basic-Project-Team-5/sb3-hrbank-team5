@@ -1,7 +1,6 @@
 package com.ohgiraffers.hrbank.controller.api;
 
 import com.ohgiraffers.hrbank.dto.data.BackupDto;
-import com.ohgiraffers.hrbank.dto.request.BackupCreateRequest;
 import com.ohgiraffers.hrbank.dto.response.CursorPageResponseBackupDto;
 import com.ohgiraffers.hrbank.entity.StatusType;
 import io.swagger.v3.oas.annotations.Operation;
