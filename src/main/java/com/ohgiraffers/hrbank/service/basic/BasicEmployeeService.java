@@ -2,6 +2,7 @@ package com.ohgiraffers.hrbank.service.basic;
 
 import com.ohgiraffers.hrbank.dto.data.EmployeeDto;
 import com.ohgiraffers.hrbank.dto.request.EmployeeCreateRequest;
+import com.ohgiraffers.hrbank.dto.request.EmployeeUpdateRequest;
 import com.ohgiraffers.hrbank.entity.Department;
 import com.ohgiraffers.hrbank.entity.Employee;
 import com.ohgiraffers.hrbank.entity.EmployeeStatus;
@@ -40,6 +41,28 @@ public class BasicEmployeeService implements EmployeeService {
         );
        employeeRepository.save(employee);
 
+        return employeeMapper.toDto(employee);
+    }
+
+    @Override
+    public EmployeeDto update(Long employeeId, EmployeeUpdateRequest employeeUpdateRequest) {
+        Employee employee = employeeRepository.findById(employeeId)
+            .orElseThrow(() -> new NoSuchElementException("Employee with id " + employeeId + " not found"));
+
+        String newName = employeeUpdateRequest.name();
+        String newEmail = employeeUpdateRequest.email();
+        if (employeeRepository.existsByEmail(newEmail) && !employee.getEmail().equals(newEmail)) {
+            throw new IllegalArgumentException("Employee with email " + newEmail + " already exists");
+        }
+
+        Department newDepartment = departmentRepository.findDepartmentById(employeeUpdateRequest.departmentId());
+        String newPosition = employeeUpdateRequest.position();
+        LocalDate newHireDate = employeeUpdateRequest.hireDate();
+        EmployeeStatus newStatus = EmployeeStatus.valueOf(employeeUpdateRequest.status());
+
+        String newMemo = employeeUpdateRequest.memo();
+
+        employee.update(newName, newEmail, newDepartment, newPosition, newHireDate, newStatus);
         return employeeMapper.toDto(employee);
     }
 

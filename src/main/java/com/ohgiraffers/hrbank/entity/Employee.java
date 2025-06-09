@@ -68,4 +68,25 @@ public class Employee {
         this.hireDate = hireDate;
         this.status = EmployeeStatus.ACTIVE;
     }
+
+    public void update(String newName, String newEmail, Department newDepartment, String newPosition, LocalDate newHireDate, EmployeeStatus newStatus) {
+        if (newName != null && !newName.equals(this.name)) {
+            this.name = newName;
+        }
+        if (newEmail != null && !newEmail.equals(this.email)) {
+            this.email = newEmail;
+        }
+        if (newDepartment != null && !newDepartment.equals(this.department)) {
+            this.department = newDepartment;
+        }
+        if (newPosition != null && !newPosition.equals(this.position)) {
+            this.position = newPosition;
+        }
+        if (newHireDate != null && !newHireDate.equals(this.hireDate)) {
+            this.hireDate = newHireDate;
+        }
+        if (newStatus != null && !newStatus.equals(this.status)) {
+            this.status = newStatus;
+        }
+    }
 }
