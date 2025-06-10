@@ -2,7 +2,7 @@ package com.ohgiraffers.hrbank.controller;
 
 import com.ohgiraffers.hrbank.dto.request.FileCreateRequest;
 import com.ohgiraffers.hrbank.entity.File;
-import com.ohgiraffers.hrbank.service.basic.FileService;
+import com.ohgiraffers.hrbank.service.FileService;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import java.io.IOException;
 import lombok.RequiredArgsConstructor;
