@@ -11,6 +11,7 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @NoArgsConstructor
 public class File {
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
@@ -23,4 +24,26 @@ public class File {
 
     @Column(name = "size", nullable = false)
     private Long size;
+
+    public File(String name, String type, Long size) {
+        this.name = name;
+        this.type = type;
+        this.size = size;
+    }
+
+    public void update(String name, String type, Long size) {
+        this.name = name;
+        this.type = type;
+        this.size = size;
+    }
+
+    @Override
+    public String toString() {
+        return "File{" +
+            "id=" + id +
+            ", name='" + name + '\'' +
+            ", type='" + type + '\'' +
+            ", size=" + size +
+            '}';
+    }
 }
