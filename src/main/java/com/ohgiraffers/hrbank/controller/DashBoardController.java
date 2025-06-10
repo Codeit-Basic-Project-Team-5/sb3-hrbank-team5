@@ -1,5 +1,6 @@
 package com.ohgiraffers.hrbank.controller;
 
+import com.ohgiraffers.hrbank.dto.data.BackupDto;
 import com.ohgiraffers.hrbank.dto.data.EmployeeDistributionDto;
 import com.ohgiraffers.hrbank.entity.EmployeeStatus;
 import com.ohgiraffers.hrbank.service.DashBoardService;
@@ -29,7 +30,9 @@ public class DashBoardController {
         @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDate toDate
     ) {
         long count = dashBoardService.getCount(status, fromDate, toDate);
-        return ResponseEntity.status(HttpStatus.CREATED).body(count);
+        return ResponseEntity
+            .status(HttpStatus.CREATED)
+            .body(count);
     }
 
     @GetMapping("/employees/stats/distribution")
@@ -38,7 +41,9 @@ public class DashBoardController {
         @RequestParam(defaultValue = "ACTIVE") EmployeeStatus status
     ) {
         List<EmployeeDistributionDto> responses = dashBoardService.getDistribution(groupBy, status);
-        return ResponseEntity.status(HttpStatus.CREATED).body(responses);
+        return ResponseEntity
+            .status(HttpStatus.CREATED)
+            .body(responses);
     }
 
     @GetMapping("/change-logs/count")
@@ -47,9 +52,16 @@ public class DashBoardController {
         @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDate toDate
     ) {
         long count = dashBoardService.getCount(null, fromDate, toDate);
-        return ResponseEntity.status(HttpStatus.CREATED).body(count);
+        return ResponseEntity
+            .status(HttpStatus.CREATED)
+            .body(count);
     }
 
 //    @GetMapping("/backups/latest")
-//    public ResponseEntity<>
+//    public ResponseEntity<BackupDto> getLatestBackup(@RequestParam(defaultValue = "COMPLETED") String status) {
+//        BackupDto backupDto = dashBoardService.getLatestBackup(status);
+//        return ResponseEntity
+//            .status(HttpStatus.CREATED)
+//            .body(backupDto);
+//    }
 }

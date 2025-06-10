@@ -4,6 +4,7 @@ import com.ohgiraffers.hrbank.entity.Backup;
 import com.ohgiraffers.hrbank.entity.StatusType;
 import java.time.Instant;
 import java.util.List;
+import java.util.Optional;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -34,4 +35,6 @@ public interface BackupRepository extends JpaRepository<Backup, Long> {
         Pageable pageable // PageRequest.of(0, size + 1)
     );
 
+    @Query("SELECT b FROM Backup b WHERE b.status = :status ORDER BY b.endedAt DESC")
+    Optional<Backup> findLatestBackupByStatus(String status);
 }

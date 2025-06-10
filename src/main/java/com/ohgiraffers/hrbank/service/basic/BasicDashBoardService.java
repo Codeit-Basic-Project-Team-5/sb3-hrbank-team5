@@ -1,8 +1,11 @@
 package com.ohgiraffers.hrbank.service.basic;
 
+import com.ohgiraffers.hrbank.dto.data.BackupDto;
 import com.ohgiraffers.hrbank.dto.data.EmployeeDistributionDto;
+import com.ohgiraffers.hrbank.entity.Backup;
 import com.ohgiraffers.hrbank.entity.EmployeeStatus;
-import com.ohgiraffers.hrbank.mapper.EmployeeDistributionMapper;
+import com.ohgiraffers.hrbank.mapper.BackupMapper;
+import com.ohgiraffers.hrbank.repository.BackupRepository;
 import com.ohgiraffers.hrbank.repository.ChangeLogRepository;
 import com.ohgiraffers.hrbank.repository.EmployeeRepository;
 import com.ohgiraffers.hrbank.service.DashBoardService;
@@ -11,6 +14,7 @@ import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.ZoneId;
 import java.util.List;
+import java.util.NoSuchElementException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -21,7 +25,8 @@ import org.springframework.transaction.annotation.Transactional;
 public class BasicDashBoardService implements DashBoardService {
     private final EmployeeRepository employeeRepository;
     private final ChangeLogRepository changeLogRepository;
-    private final EmployeeDistributionMapper distributionMapper;
+    private final BackupRepository backupRepository;
+    private final BackupMapper backupMapper;
 
     public long getCount(EmployeeStatus status, LocalDate fromDate, LocalDate toDate) {
         if (status == null && fromDate == null && toDate == null)
@@ -62,5 +67,12 @@ public class BasicDashBoardService implements DashBoardService {
                 return new EmployeeDistributionDto(groupKey, count, percentage);
             })
             .toList();
+    }
+
+    public BackupDto getLatestBackup(String status) {
+        Backup backup = backupRepository.findLatestBackupByStatus(status)
+            .orElseThrow(() -> new NoSuchElementException("해당 상태의 백업이 존재하지 않습니다. (status: " + status + ")"));
+
+        return backupMapper.toDto(backup);
     }
 }
