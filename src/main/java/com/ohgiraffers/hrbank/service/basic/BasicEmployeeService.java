@@ -1,9 +1,13 @@
 package com.ohgiraffers.hrbank.service.basic;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.ohgiraffers.hrbank.dto.data.EmployeeDto;
 import com.ohgiraffers.hrbank.dto.request.EmployeeCreateRequest;
+import com.ohgiraffers.hrbank.dto.request.EmployeeSearchRequest;
 import com.ohgiraffers.hrbank.dto.request.EmployeeUpdateRequest;
 import com.ohgiraffers.hrbank.dto.request.FileCreateRequest;
+import com.ohgiraffers.hrbank.dto.response.CursorPageResponseEmployeeDto;
 import com.ohgiraffers.hrbank.entity.Department;
 import com.ohgiraffers.hrbank.entity.Employee;
 import com.ohgiraffers.hrbank.entity.EmployeeStatus;
@@ -16,11 +20,16 @@ import com.ohgiraffers.hrbank.service.EmployeeService;
 import com.ohgiraffers.hrbank.storage.FileStorage;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
+import java.util.Base64;
+import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -38,6 +47,10 @@ public class BasicEmployeeService implements EmployeeService {
     // 파일 저장 경로 설정값 주입
     @Value("${discodeit.storage.local.root-path}")
     private String fileStorageRootPath;
+
+    // JSON 직렬화를 위한 ObjectMapper (커서 인코딩용)
+    private final ObjectMapper objectMapper = new ObjectMapper()
+        .registerModule(new JavaTimeModule());
 
     @Override
     public EmployeeDto create(EmployeeCreateRequest employeeCreateRequest,
@@ -158,6 +171,188 @@ public class BasicEmployeeService implements EmployeeService {
             .orElseThrow(() -> new NoSuchElementException("Employee with id " + employeeId + " not found"));
 
         return employeeMapper.toDto(employee);
+    }
+
+    @Override
+    public CursorPageResponseEmployeeDto findEmployees(EmployeeSearchRequest searchRequest) {
+        // 1. 검색 조건 추출
+        String nameOrEmail = searchRequest.nameOrEmail();
+        Long departmentId = searchRequest.departmentId();
+        String position = searchRequest.position();
+        String employeeNumber = searchRequest.employeeNumber();
+        LocalDate hireDateFrom = searchRequest.hireDateFrom();
+        LocalDate hireDateTo = searchRequest.hireDateTo();
+        EmployeeStatus status = searchRequest.status();
+
+        // 2. 정렬 및 페이지네이션 정보 추출
+        String sortBy = searchRequest.sortBy();
+        boolean isDescending = searchRequest.isDescending();
+        int size = searchRequest.size();
+        Long lastId = searchRequest.lastId();
+
+        // 3. Pageable 생성 (size + 1로 설정하여 다음 페이지 존재 여부 확인)
+        Pageable pageable = PageRequest.of(0, size + 1);
+
+        // 4. 정렬 기준에 따라 적절한 Repository 메서드 호출
+        List<Employee> employees = fetchEmployeesBySortCriteria(
+            sortBy, nameOrEmail, departmentId, position, employeeNumber,
+            hireDateFrom, hireDateTo, status, lastId, isDescending, pageable
+        );
+
+        // 5. 다음 페이지 존재 여부 확인
+        boolean hasNext = employees.size() > size;
+        if (hasNext) {
+            employees = employees.subList(0, size); // 실제 반환할 데이터만 유지
+        }
+
+        // 6. Employee -> EmployeeDto 변환
+        List<EmployeeDto> employeeDtos = employees.stream()
+            .map(employeeMapper::toDto)
+            .toList();
+
+        // 7. 다음 커서 생성
+        String nextCursor = null;
+        Long nextIdAfter = null;
+        if (hasNext && !employees.isEmpty()) {
+            Employee lastEmployee = employees.get(employees.size() - 1);
+            nextIdAfter = lastEmployee.getId();
+            nextCursor = generateNextCursor(lastEmployee, sortBy);
+        }
+
+        // 8. 총 개수 조회 (첫 페이지일 때만 조회하여 성능 최적화)
+        Long totalElements = null;
+        if (lastId == null) { // 첫 페이지인 경우
+            totalElements = employeeRepository.countEmployeesWithConditions(
+                nameOrEmail, departmentId, position, employeeNumber,
+                hireDateFrom, hireDateTo, status
+            );
+        }
+
+        // 9. 응답 생성
+        return new CursorPageResponseEmployeeDto(
+            employeeDtos,
+            nextCursor,
+            nextIdAfter,
+            size,
+            totalElements,
+            hasNext
+        );
+    }
+
+    /**
+     * 정렬 기준에 따라 적절한 Repository 메서드를 호출
+     */
+    private List<Employee> fetchEmployeesBySortCriteria(
+        String sortBy, String nameOrEmail, Long departmentId, String position,
+        String employeeNumber, LocalDate hireDateFrom, LocalDate hireDateTo,
+        EmployeeStatus status, Long lastId, boolean isDescending, Pageable pageable) {
+
+        // 디버깅 로그 추가
+        System.out.println("=== Repository 호출 디버깅 ===");
+        System.out.println("sortBy: " + sortBy);
+        System.out.println("isDescending: " + isDescending);
+        System.out.println("lastId: " + lastId);
+
+        // 이전 페이지의 마지막 정렬 값 추출
+        Object lastSortValue = extractLastSortValue(lastId, sortBy);
+        System.out.println("lastSortValue: " + lastSortValue);
+
+        List<Employee> result;
+
+        // switch 문에서 어떤 분기로 가는지 확인
+        switch (sortBy) {
+            case "name" -> {
+                System.out.println("name으로 정렬 Repository 호출");
+                result = employeeRepository.findEmployeesWithCursorByName(
+                    nameOrEmail, departmentId, position, employeeNumber,
+                    hireDateFrom, hireDateTo, status, lastId, (String) lastSortValue,
+                    isDescending, pageable
+                );
+            }
+            case "hireDate" -> {
+                System.out.println("hireDate로 정렬 Repository 호출");
+                result = employeeRepository.findEmployeesWithCursorByHireDate(
+                    nameOrEmail, departmentId, position, employeeNumber,
+                    hireDateFrom, hireDateTo, status, lastId, (LocalDate) lastSortValue,
+                    isDescending, pageable
+                );
+            }
+            case "employeeNumber" -> {
+                System.out.println("employeeNumber로 정렬 Repository 호출");
+                result = employeeRepository.findEmployeesWithCursorByEmployeeNumber(
+                    nameOrEmail, departmentId, position, employeeNumber,
+                    hireDateFrom, hireDateTo, status, lastId, (String) lastSortValue,
+                    isDescending, pageable
+                );
+            }
+            default -> {
+                System.out.println("지원하지 않는 정렬 기준: " + sortBy);
+                throw new IllegalArgumentException("지원하지 않는 정렬 기준입니다: " + sortBy);
+            }
+        }
+
+        System.out.println("조회된 결과 수: " + result.size());
+        if (!result.isEmpty()) {
+            Employee first = result.get(0);
+            System.out.println("첫 번째 결과: " + first.getName() + " (ID: " + first.getId() + ")");
+            if (result.size() > 1) {
+                Employee second = result.get(1);
+                System.out.println("두 번째 결과: " + second.getName() + " (ID: " + second.getId() + ")");
+            }
+        }
+        System.out.println("================================");
+
+        return result;
+    }
+
+    /**
+     * 이전 페이지의 마지막 정렬 값을 추출
+     */
+    private Object extractLastSortValue(Long lastId, String sortBy) {
+        if (lastId == null) {
+            return null;
+        }
+
+        // 이전 페이지 마지막 직원 정보 조회
+        Optional<Employee> lastEmployee = employeeRepository.findById(lastId);
+        if (lastEmployee.isEmpty()) {
+            return null;
+        }
+
+        Employee employee = lastEmployee.get();
+        return switch (sortBy) {
+            case "name" -> employee.getName();
+            case "hireDate" -> employee.getHireDate();
+            case "employeeNumber" -> employee.getEmployeeNumber();
+            default -> null;
+        };
+    }
+
+    /**
+     * 다음 페이지를 위한 커서 생성
+     * 커서는 마지막 요소의 정렬 값과 ID를 Base64로 인코딩한 문자열
+     */
+    private String generateNextCursor(Employee lastEmployee, String sortBy) {
+        try {
+            // 커서 정보를 담을 Map 생성
+            var cursorInfo = new java.util.HashMap<String, Object>();
+            cursorInfo.put("id", lastEmployee.getId());
+            cursorInfo.put("sortBy", sortBy);
+
+            // 정렬 기준에 따라 값 추가
+            switch (sortBy) {
+                case "name" -> cursorInfo.put("sortValue", lastEmployee.getName());
+                case "hireDate" -> cursorInfo.put("sortValue", lastEmployee.getHireDate().toString());
+                case "employeeNumber" -> cursorInfo.put("sortValue", lastEmployee.getEmployeeNumber());
+            }
+
+            // JSON으로 직렬화 후 Base64 인코딩
+            String json = objectMapper.writeValueAsString(cursorInfo);
+            return Base64.getEncoder().encodeToString(json.getBytes(StandardCharsets.UTF_8));
+
+        } catch (Exception e) {
+            throw new RuntimeException("커서 생성 실패", e);
+        }
     }
 
     /**
