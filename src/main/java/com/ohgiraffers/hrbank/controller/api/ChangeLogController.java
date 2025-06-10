@@ -1,8 +1,7 @@
 package com.ohgiraffers.hrbank.controller.api;
 
 import com.ohgiraffers.hrbank.dto.request.ChangeLogRequest;
-import com.ohgiraffers.hrbank.dto.request.ChangeLogSearchRequest;
-import com.ohgiraffers.hrbank.dto.response.ChangeLogListResponse;
+import com.ohgiraffers.hrbank.dto.response.ChangeLogCursorResponse;
 import com.ohgiraffers.hrbank.dto.response.ChangeLogDetailResponse;
 import com.ohgiraffers.hrbank.dto.response.ChangeLogDiffResponse;
 import com.ohgiraffers.hrbank.service.ChangeLogService;
@@ -10,8 +9,6 @@ import jakarta.servlet.http.HttpServletRequest;
 import java.time.Instant;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.domain.*;
-import org.springframework.data.web.PageableDefault;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -32,14 +29,19 @@ public class ChangeLogController {
             .body(service.registerChangeLog(dto, request));
     }
 
+    // iso => 날짜 포맷팅
     @GetMapping
-    public ResponseEntity<Page<ChangeLogListResponse>> list(
-        ChangeLogSearchRequest criteria,
-        @PageableDefault(size = 30, sort = "updatedAt", direction = Sort.Direction.ASC)
-        Pageable pageable
+    public ResponseEntity<ChangeLogCursorResponse> listByCursor(
+        @RequestParam(required = false)
+        @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME)
+        Instant cursor,
+        @RequestParam(defaultValue = "30") int size,
+        @RequestParam(defaultValue = "updatedAt") String sortField,
+        @RequestParam(defaultValue = "DESC")     String sortDir
     ) {
-        Page<ChangeLogListResponse> page = service.searchChangeLogs(criteria, pageable);
-        return ResponseEntity.ok(page);
+        return ResponseEntity.ok(
+            service.searchWithCursor(cursor, size, sortField, sortDir)
+        );
     }
 
     @GetMapping("/{id}")

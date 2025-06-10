@@ -2,7 +2,7 @@ package com.ohgiraffers.hrbank.repository;
 
 import com.ohgiraffers.hrbank.entity.ChangeLog;
 import java.time.Instant;
-import org.springframework.data.domain.Page;
+import java.util.List;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.*;
 import org.springframework.data.repository.query.Param;
@@ -13,24 +13,18 @@ public interface ChangeLogRepository extends JpaRepository<ChangeLog, Long> {
 
 
     @Query("""
-        SELECT c
-          FROM ChangeLog c
-         WHERE (:empId IS NULL    OR str(c.employeeId) LIKE %:empId%)
-           AND (:memo   IS NULL    OR c.memo           LIKE %:memo%)
-           AND (:ip     IS NULL    OR c.ipAddress      LIKE %:ip%)
-           AND (:type   IS NULL    OR c.type           = :type)
-           AND (:fromDt IS NULL    OR c.updatedAt      >= :fromDt)
-           AND (:toDt   IS NULL    OR c.updatedAt      <= :toDt)
-        """)
-    Page<ChangeLog> search(
-        @Param("empId")  String employeeIdPartial,
-        @Param("memo")   String memoPartial,
-        @Param("ip")     String ipAddressPartial,
-        @Param("type")   String type,
-        @Param("fromDt") Instant from,
-        @Param("toDt")   Instant to,
-        Pageable pageable
+    SELECT c
+      FROM ChangeLog c
+     WHERE c.updatedAt < :cursor
+     ORDER BY c.updatedAt DESC, c.id DESC
+""")
+    List<ChangeLog> searchWithCursor(
+            @Param("cursor") Instant cursor,
+            Pageable pageable
     );
+
+    //전체 이력 건수 반환
+    long count();
 
     Long countByUpdatedAtBetween(Instant from, Instant to);
 }

@@ -1,10 +1,10 @@
 package com.ohgiraffers.hrbank.service.basic;
 
 import com.ohgiraffers.hrbank.dto.request.ChangeLogRequest;
-import com.ohgiraffers.hrbank.dto.request.ChangeLogSearchRequest;
+import com.ohgiraffers.hrbank.dto.response.ChangeLogCursorResponse;
+import com.ohgiraffers.hrbank.dto.response.ChangeLogListResponse;
 import com.ohgiraffers.hrbank.dto.response.ChangeLogDetailResponse;
 import com.ohgiraffers.hrbank.dto.response.ChangeLogDiffResponse;
-import com.ohgiraffers.hrbank.dto.response.ChangeLogListResponse;
 import com.ohgiraffers.hrbank.entity.ChangeLog;
 import com.ohgiraffers.hrbank.entity.ChangeLogDiff;
 import com.ohgiraffers.hrbank.entity.Employee;
@@ -19,8 +19,9 @@ import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.NoSuchElementException;
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -49,33 +50,75 @@ public class BasicChangeLogService implements ChangeLogService {
         changeLog.setDiffs(diffEntities);
 
         changeLogRepository.save(changeLog);
-
         return changeLog.getId();
     }
 
     @Override
     @Transactional(readOnly = true)
-    public Page<ChangeLogListResponse> searchChangeLogs(
-        ChangeLogSearchRequest request,
-        Pageable pageable
-    ) {
-        Page<ChangeLog> page = changeLogRepository.search(
-            request.employeeIdPartial(),
-            request.memoPartial(),
-            request.ipAddressPartial(),
-            request.type(),
-            request.from(),
-            request.to(),
-            pageable
+    public ChangeLogCursorResponse searchWithCursor(Instant cursor, int size, String sortField, String sortDir) {
+        Instant effectiveCursor;
+        if (cursor != null) {
+            effectiveCursor = cursor;
+        } else {
+            effectiveCursor = Instant.now().plus(1, ChronoUnit.DAYS);
+        }
+
+        Sort.Direction direction = Sort.Direction.fromString(sortDir);
+        Sort sortOption = Sort.by(new Sort.Order(direction, sortField))
+                .and(Sort.by(direction, "id"));
+
+        Pageable page = PageRequest.of(0, size + 1, sortOption);
+        List<ChangeLogListResponse> fetched = changeLogRepository
+                .searchWithCursor(effectiveCursor, page)
+                .stream()
+                .map(log -> new ChangeLogListResponse(
+                        log.getId(),
+                        log.getType(),
+                        String.valueOf(log.getEmployeeId()),
+                        log.getMemo(),
+                        log.getIpAddress(),
+                        log.getUpdatedAt()
+                ))
+                .toList();
+
+        boolean hasNext;
+        if (fetched.size() > size) {
+            hasNext = true;
+        } else {
+            hasNext = false;
+        }
+
+        List<ChangeLogListResponse> pageContent;
+        if (hasNext) {
+            pageContent = fetched.subList(0, size);
+        } else {
+            pageContent = fetched;
+        }
+
+        Instant nextCursor;
+        if (hasNext) {
+            nextCursor = pageContent.get(pageContent.size() - 1).updatedAt();
+        } else {
+            nextCursor = null;
+        }
+
+        Long nextIdAfter;
+        if (hasNext) {
+            nextIdAfter = pageContent.get(pageContent.size() - 1).id();
+        } else {
+            nextIdAfter = null;
+        }
+
+        long total = changeLogRepository.count();
+
+        return new ChangeLogCursorResponse(
+                pageContent,
+                nextCursor,
+                nextIdAfter,
+                size,
+                total,
+                hasNext
         );
-        return page.map(log -> new ChangeLogListResponse(
-            log.getId(),
-            log.getType(),
-            String.valueOf(log.getEmployeeId()),
-            log.getMemo(),
-            log.getIpAddress(),
-            log.getUpdatedAt()
-        ));
     }
 
     @Override
