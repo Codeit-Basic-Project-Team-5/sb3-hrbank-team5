@@ -303,7 +303,7 @@ public class BasicBackupService implements BackupService {
     }
 
     @Override
-    @Scheduled(cron = "0 * * * * *")
+    @Scheduled(cron = "0 0 * * * *")
     @Transactional
     public BackupDto executeBackup() {
         String worker = "system";
