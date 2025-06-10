@@ -10,7 +10,7 @@ import org.mapstruct.ReportingPolicy;
 @Mapper(componentModel = "spring",unmappedTargetPolicy = ReportingPolicy.IGNORE)
 public interface BackupMapper {
 
-    @Mapping(target = "id", source = "file.id")
+    @Mapping(target = "fileId", source = "file.id")
     BackupDto toDto(Backup backup);
 
 }
