@@ -16,7 +16,7 @@ import com.ohgiraffers.hrbank.repository.BackupRepository;
 import com.ohgiraffers.hrbank.repository.ChangeLogRepository;
 import com.ohgiraffers.hrbank.repository.EmployeeRepository;
 import com.ohgiraffers.hrbank.repository.FileRepository;
-import com.ohgiraffers.hrbank.storage.Filestorage;
+import com.ohgiraffers.hrbank.storage.FileStorage;
 import com.ohgiraffers.hrbank.service.BackupService;
 import jakarta.servlet.http.HttpServletRequest;
 import java.io.BufferedWriter;
