@@ -51,7 +51,7 @@ public class BasicBackupService implements BackupService {
     private final FileRepository fileRepository;
     private final FileStorage fileStorage;
     private final EmployeeRepository employeeRepository;
-    private @Value("${discodeit.storage.local.root-path}") String root;
+    private @Value("${hrbank.storage.local.root-path}") String root;
 
     /**
      * dataBackupRepository에서 모든 항목을 검색하여 Dto로 반환
