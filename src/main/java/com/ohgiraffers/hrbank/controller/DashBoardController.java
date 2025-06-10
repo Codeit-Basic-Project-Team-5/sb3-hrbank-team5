@@ -1,34 +1,31 @@
 package com.ohgiraffers.hrbank.controller;
 
+import com.ohgiraffers.hrbank.entity.EmployeeStatus;
 import com.ohgiraffers.hrbank.service.DashBoardService;
-import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.responses.ApiResponse;
-import io.swagger.v3.oas.annotations.responses.ApiResponses;
-import java.util.Map;
+import java.time.LocalDate;
 import lombok.RequiredArgsConstructor;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 //테스트용 컨트롤러
 @RestController
 @RequiredArgsConstructor
-@RequestMapping("api/dashboard")
+@RequestMapping("api")
 public class DashBoardController {
 
     private final DashBoardService dashBoardService;
 
-//    @Operation(summary = "직원 수 조회")
-//    @ApiResponses({
-//        @ApiResponse(
-//            responseCode = "200", description = "조회 성공",
-//            content = {}
-//        )
-//    })
-//    @GetMapping("/count")
-//    public ResponseEntity<Map<String, Long>> getEmployeeCount() {
-//        long count = dashBoardService.getTotalEmployeeCount();
-//        return ResponseEntity.ok(Map.of("count", count));
-//    }
+    @GetMapping("/employees/count")
+    public ResponseEntity<Long> getEmployeeCount(
+        @RequestParam(required = false) EmployeeStatus status,
+        @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDate fromDate,
+        @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDate toDate
+    ) {
+        long count = dashBoardService.getEmployeeCount(status, fromDate, toDate);
+        return ResponseEntity.ok(count);
+    }
 }
