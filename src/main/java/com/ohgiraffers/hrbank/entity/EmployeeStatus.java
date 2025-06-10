@@ -10,4 +10,9 @@ public enum EmployeeStatus {
     EmployeeStatus(String statusName) {
         this.statusName = statusName;
     }
+
+    // 한국어 상태명을 반환하는 getter 메서드
+    public String getStatusName() {
+        return statusName;
+    }
 }
