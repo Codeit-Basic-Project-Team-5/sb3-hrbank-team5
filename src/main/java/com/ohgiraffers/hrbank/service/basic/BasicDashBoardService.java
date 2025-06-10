@@ -2,6 +2,7 @@ package com.ohgiraffers.hrbank.service.basic;
 
 import com.ohgiraffers.hrbank.dto.data.EmployeeDistributionDto;
 import com.ohgiraffers.hrbank.entity.EmployeeStatus;
+import com.ohgiraffers.hrbank.mapper.EmployeeDistributionMapper;
 import com.ohgiraffers.hrbank.repository.ChangeLogRepository;
 import com.ohgiraffers.hrbank.repository.EmployeeRepository;
 import com.ohgiraffers.hrbank.service.DashBoardService;
@@ -20,6 +21,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class BasicDashBoardService implements DashBoardService {
     private final EmployeeRepository employeeRepository;
     private final ChangeLogRepository changeLogRepository;
+    private final EmployeeDistributionMapper distributionMapper;
 
     public long getCount(EmployeeStatus status, LocalDate fromDate, LocalDate toDate) {
         if (status == null && fromDate == null && toDate == null)
@@ -44,13 +46,9 @@ public class BasicDashBoardService implements DashBoardService {
     }
 
     public List<EmployeeDistributionDto> getDistribution(String groupBy, EmployeeStatus status) {
-        List<Object[]> results;
-
-        if (groupBy.equals("department")) {
-            results = employeeRepository.countByDepartment(status);
-        } else {
-            results = employeeRepository.countByPosition(status);
-        }
+        List<Object[]> results = groupBy.equals("department")
+            ? employeeRepository.countByDepartment(status)
+            : employeeRepository.countByPosition(status);
 
         long total = results.stream()
             .mapToLong(row -> ((Number) row[1]).longValue())

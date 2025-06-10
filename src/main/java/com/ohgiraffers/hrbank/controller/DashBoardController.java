@@ -37,9 +37,9 @@ public class DashBoardController {
         @RequestParam(defaultValue = "department") String groupBy,
         @RequestParam(defaultValue = "ACTIVE") EmployeeStatus status
     ) {
-        List<EmployeeDistributionDto> dtos = dashBoardService.getDistribution(groupBy, status);
-        return ResponseEntity.status(HttpStatus.CREATED).body(dtos);
-    };
+        List<EmployeeDistributionDto> responses = dashBoardService.getDistribution(groupBy, status);
+        return ResponseEntity.status(HttpStatus.CREATED).body(responses);
+    }
 
     @GetMapping("/change-logs/count")
     public ResponseEntity<Long> getCount(
@@ -49,4 +49,7 @@ public class DashBoardController {
         long count = dashBoardService.getCount(null, fromDate, toDate);
         return ResponseEntity.status(HttpStatus.CREATED).body(count);
     }
+
+//    @GetMapping("/backups/latest")
+//    public ResponseEntity<>
 }
