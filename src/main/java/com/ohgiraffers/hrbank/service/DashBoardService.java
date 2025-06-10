@@ -5,5 +5,5 @@ import java.time.LocalDate;
 
 public interface DashBoardService {
 
-    long getEmployeeCount(EmployeeStatus status, LocalDate fromDate, LocalDate toDate);
+    long getCount(EmployeeStatus status, LocalDate fromDate, LocalDate toDate);
 }

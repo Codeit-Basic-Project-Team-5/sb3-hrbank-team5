@@ -20,12 +20,21 @@ public class DashBoardController {
     private final DashBoardService dashBoardService;
 
     @GetMapping("/employees/count")
-    public ResponseEntity<Long> getEmployeeCount(
+    public ResponseEntity<Long> getCount(
         @RequestParam(required = false) EmployeeStatus status,
         @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDate fromDate,
         @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDate toDate
     ) {
-        long count = dashBoardService.getEmployeeCount(status, fromDate, toDate);
+        long count = dashBoardService.getCount(status, fromDate, toDate);
+        return ResponseEntity.ok(count);
+    }
+
+    @GetMapping("/change-logs/count")
+    public ResponseEntity<Long> getCount(
+        @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDate fromDate,
+        @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDate toDate
+    ) {
+        long count = dashBoardService.getCount(null, fromDate, toDate);
         return ResponseEntity.ok(count);
     }
 }
