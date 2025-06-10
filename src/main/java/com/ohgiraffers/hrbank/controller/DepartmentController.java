@@ -4,9 +4,9 @@ import com.ohgiraffers.hrbank.controller.api.DepartmentApi;
 import com.ohgiraffers.hrbank.dto.data.DepartmentDto;
 import com.ohgiraffers.hrbank.dto.request.DepartmentCreateRequest;
 import com.ohgiraffers.hrbank.dto.request.DepartmentUpdateRequest;
+import com.ohgiraffers.hrbank.dto.response.DepartmentPageResponse;
 import com.ohgiraffers.hrbank.entity.Department;
 import com.ohgiraffers.hrbank.service.DepartmentService;
-import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -16,7 +16,9 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -33,9 +35,9 @@ public class DepartmentController implements DepartmentApi {
    * 생성된 DepartmentDTO
    */
   @Override
-  @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
+  @PostMapping(consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
   public ResponseEntity<DepartmentDto> create(
-      @RequestPart("departmentCreateRequest")DepartmentCreateRequest request
+      @RequestBody DepartmentCreateRequest request
   ) {
     Department createdDepartment = departmentService.create(request);
 
@@ -43,14 +45,23 @@ public class DepartmentController implements DepartmentApi {
   }
 
   /** 부서 다건 조회
+   * 입력값 : 소트필드=name , 소트디렉션 = asc , 사이즈 = 30 세가지.
    * 출력 :
-   * List of DepartmentDTO
+   * contents List of DepartmentDTO
+   * hasNext
    */
   @Override
   @GetMapping(produces = MediaType.APPLICATION_JSON_VALUE)
-  public ResponseEntity<List<DepartmentDto>> findAll() {
-    List<DepartmentDto> departments = departmentService.findAll();
-    return departments.isEmpty() ? ResponseEntity.noContent().build() : ResponseEntity.status(HttpStatus.OK).body(departments);
+  public ResponseEntity<DepartmentPageResponse<DepartmentDto>> findAll(
+      @RequestParam(value = "nameOrDescription", required = false) String nameOrDescription,
+      @RequestParam(value = "idAfter",required = false) Long idAfter,
+      @RequestParam(value = "cursor",required = false) String cursor,
+      @RequestParam(value = "sortField", defaultValue = "name") String sortField,
+      @RequestParam(value = "sortDirection", defaultValue = "asc") String sortDirection,
+      @RequestParam(value = "size", defaultValue = "10") int size
+  ) {
+    DepartmentPageResponse<DepartmentDto> result = departmentService.findAllSorted(nameOrDescription, idAfter, cursor, sortField, sortDirection, size);
+    return ResponseEntity.ok(result);
   }
 
   /** 부서 단건 조회
@@ -78,7 +89,7 @@ public class DepartmentController implements DepartmentApi {
   @PatchMapping("/{departmentId}")
   public ResponseEntity<DepartmentDto> update(
       @PathVariable Long departmentId,
-      @RequestPart("departmentUpdateRequest") DepartmentUpdateRequest request
+      @RequestBody DepartmentUpdateRequest request
   ) {
     return ResponseEntity.status(HttpStatus.OK).
         body(DepartmentDto.fromEntity(

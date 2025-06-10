@@ -12,7 +12,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 @Entity
-@Table(name = "departments")
+@Table(name = "departments", schema = "sr_bank")
 @Getter
 @NoArgsConstructor
 public class Department {

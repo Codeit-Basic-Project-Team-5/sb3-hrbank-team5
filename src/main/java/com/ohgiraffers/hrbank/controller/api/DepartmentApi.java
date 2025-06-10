@@ -4,6 +4,7 @@ package com.ohgiraffers.hrbank.controller.api;
 import com.ohgiraffers.hrbank.dto.data.DepartmentDto;
 import com.ohgiraffers.hrbank.dto.request.DepartmentCreateRequest;
 import com.ohgiraffers.hrbank.dto.request.DepartmentUpdateRequest;
+import com.ohgiraffers.hrbank.dto.response.DepartmentPageResponse;
 import com.ohgiraffers.hrbank.entity.Department;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -46,7 +47,7 @@ public interface DepartmentApi {
           content = @Content(array = @ArraySchema(schema = @Schema(implementation = DepartmentDto.class)))
       )
   })
-  ResponseEntity<List<DepartmentDto>> findAll();
+  ResponseEntity<DepartmentPageResponse<DepartmentDto>> findAll(String nameOrDescription,Long idAfter,String cursor, String sortField,String sortDirection,int size);
 
   @Operation(summary = "ID로 부서 상세조회")    //부서 단건 조회 (GET /api/departments/{departmentId})
   @ApiResponses(value = {
