@@ -29,6 +29,7 @@ public record EmployeeSearchRequest(
 
     // 페이지네이션 관련
     Long idAfter,               // 이전 페이지의 마지막 요소 ID (커서)
+    String cursor,              // 커서 (다음 페이지 시작점)
     Integer size               // 한 페이지 크기 (기본값 20)
 ) {
 

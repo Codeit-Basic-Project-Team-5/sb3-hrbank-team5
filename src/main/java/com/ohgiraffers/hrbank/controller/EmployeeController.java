@@ -119,6 +119,7 @@ public class EmployeeController {
 
         // 페이지네이션
         @RequestParam(required = false) Long idAfter,
+        @RequestParam(required = false) String cursor,
         @RequestParam(defaultValue = "30") Integer size
     ) {
         // 요청 파라미터를 EmployeeSearchRequest로 변환
@@ -133,6 +134,7 @@ public class EmployeeController {
             sortField,
             sortDirection,
             idAfter,
+            cursor,
             size
         );
 
@@ -150,7 +152,7 @@ public class EmployeeController {
     @GetMapping("/next")
     public ResponseEntity<CursorPageResponseEmployeeDto> findNextEmployees(
         @RequestParam String cursor,
-        @RequestParam(defaultValue = "20") Integer size,
+        @RequestParam(defaultValue = "30") Integer size,
 
         // 기존 검색 조건들은 유지 (커서에 포함되지 않으므로 다시 전달 필요)
         @RequestParam(required = false) String nameOrEmail,
@@ -178,6 +180,7 @@ public class EmployeeController {
             cursorInfo.sortField(),
             cursorInfo.sortDirection(),
             cursorInfo.idAfter(),
+            cursor,
             size
         );
 
