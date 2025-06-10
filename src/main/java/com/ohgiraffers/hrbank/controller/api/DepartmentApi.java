@@ -88,6 +88,10 @@ public interface DepartmentApi {
       @ApiResponse(
           responseCode = "404", description = "Department 를 찾을 수 없음.",
           content = @Content(examples = @ExampleObject("Department with id {departmentId} not found"))
+      ),
+      @ApiResponse(
+          responseCode = "400", description = "소속 직원이 있는 부서는 삭제할 수 없습니다",
+          content = @Content(examples = @ExampleObject("Department with Employee cannot be deleted"))
       )
   })
   ResponseEntity<Void> delete(Long id);
