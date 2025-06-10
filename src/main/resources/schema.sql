@@ -2,7 +2,7 @@
 DROP TABLE IF EXISTS departments CASCADE;
 DROP TABLE IF EXISTS employees CASCADE;
 DROP TABLE IF EXISTS change_log_diff CASCADE;
-DROP TABLE IF EXISTS change_log CASCADE;
+DROP TABLE IF EXISTS change_logs CASCADE;
 DROP TABLE IF EXISTS backup_history CASCADE;
 DROP TABLE IF EXISTS files CASCADE;
 
@@ -36,22 +36,17 @@ CREATE TABLE IF NOT EXISTS backup_histories
             ON DELETE SET NULL
 );
 
-CREATE TABLE IF NOT EXISTS employees
-(
-    id              BIGINT PRIMARY KEY,
-    name            VARCHAR(50)             NOT NULL,
-    email           VARCHAR(255)            NOT NULL UNIQUE,
-    employee_number VARCHAR(50)             NOT NULL,
-    department_id   BIGINT                  NOT NULL
-        REFERENCES departments (id)
-            ON DELETE RESTRICT,
-    position        VARCHAR(50)             NOT NULL,
-    hire_date       DATE                    NOT NULL,
-    status          VARCHAR(10)             NOT NULL
-        CHECK (status IN ('ACTIVE','ON_LEAVE','RESIGNED')),
-    profile_image_id    BIGINT
-        REFERENCES files (id)
-            ON DELETE SET NULL
+-- 기존 employees 테이블 드롭 후 재생성 예시
+CREATE TABLE employees (
+                           id BIGSERIAL PRIMARY KEY,
+                           name VARCHAR(50) NOT NULL,
+                           email VARCHAR(255) NOT NULL UNIQUE,
+                           employee_number VARCHAR(50) NOT NULL,
+                           department_id BIGINT NOT NULL REFERENCES departments(id),
+                           position VARCHAR(50) NOT NULL,
+                           hire_date DATE NOT NULL,
+                           status VARCHAR(10) NOT NULL CHECK (status IN ('ACTIVE','ON_LEAVE','RESIGNED')),
+                           profile_image_id BIGINT REFERENCES files(id)
 );
 CREATE TABLE IF NOT EXISTS change_logs
 (
@@ -76,26 +71,4 @@ CREATE TABLE change_log_diff (
     created_at     TIMESTAMPTZ NOT NULL
 );
 
--- 3. 더미데이터 생성
-
-
-INSERT INTO backup_histories (id, worker, started_at, ended_at, status, file_id)
-VALUES (18, '175.193.75.221', '2025-04-21T02:22:23.655094Z', '2025-04-21T02:22:23.660195Z','SKIPPED', NULL),
-       (17, '121.144.72.75', '2025-04-21T02:20:56.757538Z', '2025-04-21T02:20:56.763057Z','SKIPPED', NULL),
-       (16, '121.144.72.75', '2025-04-21T02:20:36.504543Z', '2025-04-21T02:20:36.519658Z','COMPLETED', 8),
-       (15, '220.77.3.119', '2025-04-21T01:37:40.518955Z', '2025-04-21T01:37:40.541564Z','COMPLETED', 7),
-       (14, '180.65.189.133', '2025-04-20T15:31:07.499496Z', '2025-04-20T15:31:07.505811Z','SKIPPED', NULL),
-       (13, '180.65.189.133', '2025-04-20T15:29:31.969907Z', '2025-04-20T15:29:31.993032Z','COMPLETED', 6),
-       (12, '180.65.189.133', '2025-04-19T10:00:18.100449Z', '2025-04-19T10:00:18.107217Z','SKIPPED', NULL),
-       (11, '180.65.189.133', '2025-04-19T10:00:17.220859Z', '2025-04-19T10:00:17.227610Z','SKIPPED', NULL),
-       (10, '180.65.189.133', '2025-04-19T10:00:17.040586Z', '2025-04-19T10:00:17.047433Z','SKIPPED', NULL),
-       (9, '180.65.189.133', '2025-04-19T10:00:16.678209Z', '2025-04-19T10:00:16.684617Z','SKIPPED', NULL),
-       (8, '180.65.189.133', '2025-04-19T10:00:14.277656Z', '2025-04-19T10:00:14.305872Z','COMPLETED', 5),
-       (7, '175.202.152.206', '2025-04-18T08:38:23.726513Z', '2025-04-18T08:38:23.734518Z','SKIPPED', NULL),
-       (6, '112.169.106.184', '2025-04-18T07:20:27.279941Z', '2025-04-18T07:20:27.336740Z','SKIPPED', NULL),
-       (5, 'system', '2025-04-17T05:45:57.873937Z', '2025-04-17T05:45:57.919445Z', 'SKIPPED', NULL),
-       (4, 'system', '2025-04-17T05:45:57.739259Z', '2025-04-17T05:45:57.863262Z', 'COMPLETED', 4),
-       (3, 'system', '2025-04-17T05:45:57.444328Z', '2025-04-17T05:45:57.554389Z', 'COMPLETED', 3),
-       (2, 'system', '2025-04-17T05:45:57.075433Z', '2025-04-17T05:45:57.157895Z', 'COMPLETED', 2),
-       (1, 'system', '2025-04-17T05:45:56.687677Z', '2025-04-17T05:45:56.771990Z', 'COMPLETED', 1);
 

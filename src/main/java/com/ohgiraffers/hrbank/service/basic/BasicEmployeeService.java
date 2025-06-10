@@ -46,7 +46,7 @@ public class BasicEmployeeService implements EmployeeService {
     private final FileStorage fileStorage;
 
     // 파일 저장 경로 설정값 주입
-    @Value("${discodeit.storage.local.root-path}")
+    @Value("${hrbank.storage.local.root-path}")
     private String fileStorageRootPath;
 
     // JSON 직렬화를 위한 ObjectMapper (커서 인코딩용)

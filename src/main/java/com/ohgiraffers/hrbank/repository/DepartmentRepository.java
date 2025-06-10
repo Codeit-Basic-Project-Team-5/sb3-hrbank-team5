@@ -29,4 +29,8 @@ public interface DepartmentRepository extends JpaRepository<Department, Integer>
         @Param("idAfter") Long idAfter,
         Pageable pageable);
 
+    // name이나 description에 검색어가 포함된 개수 반환
+    @Query("SELECT COUNT(d) FROM Department d WHERE d.name LIKE %:keyword% OR d.description LIKE %:keyword%")
+    long countByNameOrDescription(@Param("keyword") String keyword);
+
 }

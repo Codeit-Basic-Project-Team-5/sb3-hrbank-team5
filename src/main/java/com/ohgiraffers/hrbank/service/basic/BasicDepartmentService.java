@@ -5,7 +5,9 @@ import com.ohgiraffers.hrbank.dto.request.DepartmentCreateRequest;
 import com.ohgiraffers.hrbank.dto.request.DepartmentUpdateRequest;
 import com.ohgiraffers.hrbank.dto.response.DepartmentPageResponse;
 import com.ohgiraffers.hrbank.entity.Department;
+import com.ohgiraffers.hrbank.exception.DepartmentHasEmployeesException;
 import com.ohgiraffers.hrbank.repository.DepartmentRepository;
+import com.ohgiraffers.hrbank.repository.EmployeeRepository;
 import com.ohgiraffers.hrbank.service.DepartmentService;
 import java.time.LocalDate;
 import java.util.List;
@@ -23,6 +25,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class BasicDepartmentService implements DepartmentService {
 
     private final DepartmentRepository departmentRepository;
+    private final EmployeeRepository employeeRepository;
 
     /** 부서 생성
      * 입력 : JSON request
@@ -31,7 +34,7 @@ public class BasicDepartmentService implements DepartmentService {
      * 생성된 Department
      */
     @Override
-    public Department create(DepartmentCreateRequest request) {
+    public DepartmentDto create(DepartmentCreateRequest request) {
 
         String name = request.name();
         if (departmentRepository.existsByName(name)){
@@ -42,7 +45,7 @@ public class BasicDepartmentService implements DepartmentService {
 
         Department department = new Department(name, description, established_date);
 
-        return departmentRepository.save(department);
+        return DepartmentDto.fromEntity(departmentRepository.save(department),0L);
     }
 
     /** 전체 부서 목록 조회
@@ -53,7 +56,10 @@ public class BasicDepartmentService implements DepartmentService {
     public List<DepartmentDto> findAll() {
         return departmentRepository.findAll()
             .stream()
-            .map(this::toDto)
+            .map(depart -> {
+                Long count = employeeRepository.countByDepartmentId(depart.getId());
+                return DepartmentDto.fromEntity(depart,count);
+            })
             .toList();
     }
 
@@ -63,7 +69,9 @@ public class BasicDepartmentService implements DepartmentService {
      */
     @Override
     public DepartmentDto findById(Long id) {
-        return this.toDto(departmentRepository.findDepartmentById(id));
+        Department depart = departmentRepository.findDepartmentById(id);
+        Long count = employeeRepository.countByDepartmentId(depart.getId());
+        return DepartmentDto.fromEntity(depart, count);
     }
 
     /** 부서 정보 수정
@@ -73,7 +81,7 @@ public class BasicDepartmentService implements DepartmentService {
      * 수정된 Department
      */
     @Override
-    public Department update(Long id,DepartmentUpdateRequest request) {
+    public DepartmentDto update(Long id,DepartmentUpdateRequest request) {
         if(!departmentRepository.existsById(id)){
             throw new IllegalArgumentException("존재하지 않는 부서입니다.");
         }
@@ -84,8 +92,8 @@ public class BasicDepartmentService implements DepartmentService {
         Department department = departmentRepository.findDepartmentById(id);
 
         department.update(name,request.description(),request.establishedDate());
-
-        return departmentRepository.save(department);
+        Long count = employeeRepository.countByDepartmentId(id);
+        return DepartmentDto.fromEntity(department,count);
     }
     /** 부서 정보 삭제
      * 입력 :
@@ -95,6 +103,9 @@ public class BasicDepartmentService implements DepartmentService {
     public void delete(Long id) {
         if (!departmentRepository.existsById(id)){
             throw new IllegalArgumentException("존재하지 않는 Department입니다.");
+        }
+        if(employeeRepository.countByDepartmentId(id) != 0){
+            throw new DepartmentHasEmployeesException();
         }
         Department department = departmentRepository.findDepartmentById(id);
         departmentRepository.delete(department);
@@ -125,7 +136,13 @@ public class BasicDepartmentService implements DepartmentService {
             idAfter,
             pageable
         );
-
+        // 조건조회 객체 숫자 : totalElements 산출
+        long totalElements;
+        if (keyword.isEmpty()) {
+            totalElements = departmentRepository.count();
+        } else {
+            totalElements = departmentRepository.countByNameOrDescription(keyword);
+        }
         // 다음 페이지 유무 연산
         boolean hasNextPage = departments.size() > size;
         if (hasNextPage){
@@ -133,7 +150,10 @@ public class BasicDepartmentService implements DepartmentService {
         }
 
         // DTO로 변환
-        List<DepartmentDto> dtoList = departments.stream().map(DepartmentDto::fromEntity).toList();
+        List<DepartmentDto> dtoList = departments.stream().map(depart -> {
+            Long count = employeeRepository.countByDepartmentId(depart.getId());
+            return DepartmentDto.fromEntity(depart, count);
+            }).toList();
 
         // 마지막 요소의 id값
         Long nextIdAfter = (!dtoList.isEmpty()) ? dtoList.get(dtoList.size() - 1).id() : null;
@@ -149,24 +169,8 @@ public class BasicDepartmentService implements DepartmentService {
             cursor, // 커서
             nextIdAfter,
             size,
-            dtoList.size(),
+            totalElements,
             hasNextPage
-        );
-    }
-
-    /** Dto 변환 메서드
-     * 입력 :
-     * Department
-     * 출력 :
-     * Dto 객체
-     */
-    private DepartmentDto toDto(Department department){
-        return new DepartmentDto(
-            department.getId(),
-            department.getName(),
-            department.getDescription(),
-            department.getEstablishedDate(),
-            10L                                 // 직원정보 연결 전 임시 value
         );
     }
 
