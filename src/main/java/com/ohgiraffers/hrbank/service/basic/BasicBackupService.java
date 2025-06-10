@@ -39,6 +39,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -168,7 +169,7 @@ public class BasicBackupService implements BackupService {
 
         // STEP 1: 시작전 데이터 생성및 저장
         Backup backup = new Backup(worker, now,null, StatusType.IN_PROGRESS);
-        backupRepository.save(backup);
+        backup = backupRepository.save(backup);
 
         // STEP 2: 데이터 백업 필요 여부 확인
         if(isBackupRequired()){
@@ -177,7 +178,7 @@ public class BasicBackupService implements BackupService {
             String type = "employee_backup_temp_type";
             Long filesize = (long) 0;
             File file= new File(name,type,filesize); // CSV 파일 생성
-            fileRepository.save(file);
+            file = fileRepository.save(file);
             try {
                 // 스트리밍 방식으로 직원 데이터 백업
                 try (OutputStream os = fileStorage.put(file.getId(), ".csv");
@@ -205,11 +206,11 @@ public class BasicBackupService implements BackupService {
                 Path filePath = Paths.get(root + file.getId() + ".csv");
                 filesize = Files.size(filePath);
                 file.update(name,type,filesize);
-                fileRepository.save(file);
+                file = fileRepository.save(file);
 
 
                 backup.update(Instant.now(), StatusType.COMPLETED, file);
-                backupRepository.save(backup);
+                backup = backupRepository.save(backup);
                 return backupMapper.toDto(backup);
 
             } catch (Exception e) {
@@ -219,7 +220,7 @@ public class BasicBackupService implements BackupService {
                 }
                 // 에러 로그 파일 저장
                 File logFile = new File("backup_failed_log_temp", "text/plain", 0L);
-                fileRepository.save(logFile);
+                logFile = fileRepository.save(logFile);
 
                 try (OutputStream logOs = fileStorage.put(logFile.getId(), ".log");
                     BufferedWriter logWriter = new BufferedWriter(new OutputStreamWriter(logOs))) {
@@ -238,17 +239,17 @@ public class BasicBackupService implements BackupService {
                     throw new RuntimeException(ex);
                 }
                 logFile.update(name,type,filesize);
-                fileRepository.save(logFile);
+                logFile = fileRepository.save(logFile);
 
                 backup.update(Instant.now(), StatusType.FAILED, logFile);
-                backupRepository.save(backup);
+                backup = backupRepository.save(backup);
                 return backupMapper.toDto(backup);
             }
 
         }
         else{
             backup.update(Instant.now(), StatusType.SKIPPED, null);
-            backupRepository.save(backup);
+            backup = backupRepository.save(backup);
             return backupMapper.toDto(backup);
         }
     }
@@ -278,7 +279,7 @@ public class BasicBackupService implements BackupService {
             .findFirst()
             .orElse(Instant.EPOCH);
 
-        if (lastUpdatedAt.isAfter(lastEndedAt)) {
+        if (lastUpdatedAt.isAfter(lastEndedAt)||lastUpdatedAt.equals(lastEndedAt)) {
             return true;
         }
         else {
@@ -301,5 +302,89 @@ public class BasicBackupService implements BackupService {
         return request.getRemoteAddr();
     }
 
+    @Override
+    @Scheduled(cron = "0 0 * * * *")
+    @Transactional
+    public BackupDto executeBackup() {
+        String worker = "system";
+        Instant startedAt = Instant.now();
 
+        // 1. 백업 히스토리 생성
+        Backup backup = new Backup(worker, startedAt,null, StatusType.IN_PROGRESS);
+        backup = backupRepository.save(backup);
+
+        String name = "employee_backup_temp_name";
+        String type = "employee_backup_temp_type";
+        Long filesize = (long) 0;
+        File file= new File(name,type,filesize); // CSV 파일 생성
+        file = fileRepository.save(file);
+        try {
+            // 스트리밍 방식으로 직원 데이터 백업
+            try (OutputStream os = fileStorage.put(file.getId(), ".csv");
+                BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(os))) {
+
+                writer.write("ID,직원번호,이름,이메일,부서,직급,입사일,상태\n");
+
+                int page = 0;
+                int size = 100;
+                Page<Employee> employeePage;
+
+                do {
+                    employeePage = employeeRepository.findAll(PageRequest.of(page, size));
+                    for (Employee emp : employeePage.getContent()) {
+                        writer.write(String.format("%d,%s,%s,%s,%s,%s,%s,%s\n",
+                            emp.getId(), emp.getEmployeeNumber(),emp.getName(), emp.getEmail(),emp.getDepartment().getName(), emp.getPosition(),emp.getHireDate(),emp.getStatus()));
+                    }
+                    page++;
+                } while (!employeePage.isLast());
+            }
+
+            // STEP 4-1: 성공 처리
+            name = "employee_backup_"+file.getId()+"_"+startedAt.atZone(TimeZone.getDefault().toZoneId());
+            type = "text/csv";
+            Path filePath = Paths.get(root + file.getId() + ".csv");
+            filesize = Files.size(filePath);
+            file.update(name,type,filesize);
+            file = fileRepository.save(file);
+
+
+            backup.update(Instant.now(), StatusType.COMPLETED, file);
+            backup = backupRepository.save(backup);
+            return backupMapper.toDto(backup);
+
+        } catch (Exception e) {
+            // STEP 4-2: 실패 처리
+            if (file != null) {
+                fileRepository.delete(file);
+            }
+            // 에러 로그 파일 저장
+            File logFile = new File("backup_failed_log_temp", "text/plain", 0L);
+            logFile = fileRepository.save(logFile);
+
+            try (OutputStream logOs = fileStorage.put(logFile.getId(), ".log");
+                BufferedWriter logWriter = new BufferedWriter(new OutputStreamWriter(logOs))) {
+                logWriter.write("백업 실패 사유:\n");
+                logWriter.write(e.getMessage());
+            } catch (IOException ioException) {
+                throw new RuntimeException(ioException);
+            }
+
+            name = "backup_failed_log_"+logFile.getId()+"_"+startedAt.atZone(TimeZone.getDefault().toZoneId());
+            type = "text/plain";
+            Path filePath = Paths.get(root + logFile.getId() + ".csv");
+            try {
+                filesize = Files.size(filePath);
+            } catch (IOException ex) {
+                throw new RuntimeException(ex);
+            }
+            logFile.update(name,type,filesize);
+            logFile = fileRepository.save(logFile);
+
+            backup.update(Instant.now(), StatusType.FAILED, logFile);
+            backup = backupRepository.save(backup);
+            return backupMapper.toDto(backup);
+        }
+
+
+    }
 }
