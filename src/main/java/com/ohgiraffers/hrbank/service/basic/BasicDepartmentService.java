@@ -5,6 +5,7 @@ import com.ohgiraffers.hrbank.dto.request.DepartmentCreateRequest;
 import com.ohgiraffers.hrbank.dto.request.DepartmentUpdateRequest;
 import com.ohgiraffers.hrbank.dto.response.DepartmentPageResponse;
 import com.ohgiraffers.hrbank.entity.Department;
+import com.ohgiraffers.hrbank.exception.DepartmentHasEmployeesException;
 import com.ohgiraffers.hrbank.repository.DepartmentRepository;
 import com.ohgiraffers.hrbank.repository.EmployeeRepository;
 import com.ohgiraffers.hrbank.service.DepartmentService;
@@ -91,7 +92,7 @@ public class BasicDepartmentService implements DepartmentService {
         Department department = departmentRepository.findDepartmentById(id);
 
         department.update(name,request.description(),request.establishedDate());
-        Long count = employeeRepository.countByDepartmentId(department.getId());
+        Long count = employeeRepository.countByDepartmentId(id);
         return DepartmentDto.fromEntity(department,count);
     }
     /** 부서 정보 삭제
@@ -102,6 +103,9 @@ public class BasicDepartmentService implements DepartmentService {
     public void delete(Long id) {
         if (!departmentRepository.existsById(id)){
             throw new IllegalArgumentException("존재하지 않는 Department입니다.");
+        }
+        if(employeeRepository.countByDepartmentId(id) != 0){
+            throw new DepartmentHasEmployeesException();
         }
         Department department = departmentRepository.findDepartmentById(id);
         departmentRepository.delete(department);
