@@ -1,6 +1,6 @@
 package com.ohgiraffers.hrbank.dto.data;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 
 public record ChangeLogDto(
     Long id,
@@ -8,7 +8,7 @@ public record ChangeLogDto(
     int employeeId,
     String memo,
     String ipAddress,
-    LocalDateTime updatedAt
+    Instant updatedAt
 
 ) {
 
