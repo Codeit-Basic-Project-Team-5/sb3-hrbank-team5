@@ -36,18 +36,24 @@ CREATE TABLE IF NOT EXISTS backup_histories
             ON DELETE SET NULL
 );
 
--- 기존 employees 테이블 드롭 후 재생성 예시
-CREATE TABLE employees (
-                           id BIGSERIAL PRIMARY KEY,
-                           name VARCHAR(50) NOT NULL,
-                           email VARCHAR(255) NOT NULL UNIQUE,
-                           employee_number VARCHAR(50) NOT NULL,
-                           department_id BIGINT NOT NULL REFERENCES departments(id),
-                           position VARCHAR(50) NOT NULL,
-                           hire_date DATE NOT NULL,
-                           status VARCHAR(10) NOT NULL CHECK (status IN ('ACTIVE','ON_LEAVE','RESIGNED')),
-                           profile_image_id BIGINT REFERENCES files(id)
+CREATE TABLE IF NOT EXISTS employees
+(
+    id              BIGSERIAL PRIMARY KEY,
+    name            VARCHAR(50)             NOT NULL,
+    email           VARCHAR(255)            NOT NULL UNIQUE,
+    employee_number VARCHAR(50)             NOT NULL,
+    department_id   BIGINT                  NOT NULL
+        REFERENCES departments (id)
+            ON DELETE RESTRICT,
+    position        VARCHAR(50)             NOT NULL,
+    hire_date       DATE                    NOT NULL,
+    status          VARCHAR(10)             NOT NULL
+        CHECK (status IN ('ACTIVE','ON_LEAVE','RESIGNED')),
+    profile_image_id    BIGINT
+        REFERENCES files (id)
+            ON DELETE SET NULL
 );
+
 CREATE TABLE IF NOT EXISTS change_logs
 (
     id           BIGSERIAL PRIMARY KEY,
