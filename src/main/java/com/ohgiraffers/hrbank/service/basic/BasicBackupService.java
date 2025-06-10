@@ -16,7 +16,7 @@ import com.ohgiraffers.hrbank.repository.BackupRepository;
 import com.ohgiraffers.hrbank.repository.ChangeLogRepository;
 import com.ohgiraffers.hrbank.repository.EmployeeRepository;
 import com.ohgiraffers.hrbank.repository.FileRepository;
-import com.ohgiraffers.hrbank.storage.Filestorage;
+import com.ohgiraffers.hrbank.storage.FileStorage;
 import com.ohgiraffers.hrbank.service.BackupService;
 import jakarta.servlet.http.HttpServletRequest;
 import java.io.BufferedWriter;
@@ -30,6 +30,7 @@ import java.time.Instant;
 import java.util.Comparator;
 import java.util.List;
 import java.util.NoSuchElementException;
+import java.util.Optional;
 import java.util.TimeZone;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
@@ -71,17 +72,34 @@ public class BasicBackupService implements BackupService {
 
 
         // 2. size + 1개 조회로 hasNext 판단
-        List<BackupDto> content = backupRepository.findAllByCursor(
-            backupCursorPageRequest.worker(),
-            backupCursorPageRequest.status(),
-            backupCursorPageRequest.startedAtFrom(),
-            backupCursorPageRequest.startedAtTo(),
-            Instant.parse(backupCursorPageRequest.cursor()),
-            backupCursorPageRequest.idAfter(),
-            pageable
-        ).stream()
-            .map(backupMapper::toDto)
-            .toList();
+        List<BackupDto> content;
+        if(backupCursorPageRequest.cursor()==null){
+            content = backupRepository.findAllByCursor(
+                    backupCursorPageRequest.worker(),
+                    backupCursorPageRequest.status(),
+                    backupCursorPageRequest.startedAtFrom(),
+                    backupCursorPageRequest.startedAtTo(),
+                    null,
+                    backupCursorPageRequest.idAfter(),
+                    pageable
+                ).stream()
+                .map(backupMapper::toDto)
+                .toList();
+        }
+        else{
+            content = backupRepository.findAllByCursor(
+                    backupCursorPageRequest.worker(),
+                    backupCursorPageRequest.status(),
+                    backupCursorPageRequest.startedAtFrom(),
+                    backupCursorPageRequest.startedAtTo(),
+                    Instant.parse(backupCursorPageRequest.cursor()),
+                    backupCursorPageRequest.idAfter(),
+                    pageable
+                ).stream()
+                .map(backupMapper::toDto)
+                .toList();
+        }
+
         boolean hasNext = content.size() > backupCursorPageRequest.size();
 
         //3. nextCursor 찾기
