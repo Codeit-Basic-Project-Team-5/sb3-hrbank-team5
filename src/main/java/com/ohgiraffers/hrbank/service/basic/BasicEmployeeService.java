@@ -177,7 +177,7 @@ public class BasicEmployeeService implements EmployeeService {
     public CursorPageResponseEmployeeDto findEmployees(EmployeeSearchRequest searchRequest) {
         // 1. 검색 조건 추출
         String nameOrEmail = searchRequest.nameOrEmail();
-        Long departmentId = searchRequest.departmentId();
+        String departmentName = searchRequest.departmentName();
         String position = searchRequest.position();
         String employeeNumber = searchRequest.employeeNumber();
         LocalDate hireDateFrom = searchRequest.hireDateFrom();
@@ -185,18 +185,18 @@ public class BasicEmployeeService implements EmployeeService {
         EmployeeStatus status = searchRequest.status();
 
         // 2. 정렬 및 페이지네이션 정보 추출
-        String sortBy = searchRequest.sortBy();
+        String sortField = searchRequest.sortField();
         boolean isDescending = searchRequest.isDescending();
         int size = searchRequest.size();
-        Long lastId = searchRequest.lastId();
+        Long idAfter = searchRequest.idAfter();
 
         // 3. Pageable 생성 (size + 1로 설정하여 다음 페이지 존재 여부 확인)
         Pageable pageable = PageRequest.of(0, size + 1);
 
         // 4. 정렬 기준에 따라 적절한 Repository 메서드 호출
         List<Employee> employees = fetchEmployeesBySortCriteria(
-            sortBy, nameOrEmail, departmentId, position, employeeNumber,
-            hireDateFrom, hireDateTo, status, lastId, isDescending, pageable
+            sortField, nameOrEmail, departmentName, position, employeeNumber,
+            hireDateFrom, hireDateTo, status, idAfter, isDescending, pageable
         );
 
         // 5. 다음 페이지 존재 여부 확인
@@ -216,14 +216,14 @@ public class BasicEmployeeService implements EmployeeService {
         if (hasNext && !employees.isEmpty()) {
             Employee lastEmployee = employees.get(employees.size() - 1);
             nextIdAfter = lastEmployee.getId();
-            nextCursor = generateNextCursor(lastEmployee, sortBy);
+            nextCursor = generateNextCursor(lastEmployee, sortField);
         }
 
         // 8. 총 개수 조회 (첫 페이지일 때만 조회하여 성능 최적화)
         Long totalElements = null;
-        if (lastId == null) { // 첫 페이지인 경우
+        if (idAfter == null) { // 첫 페이지인 경우
             totalElements = employeeRepository.countEmployeesWithConditions(
-                nameOrEmail, departmentId, position, employeeNumber,
+                nameOrEmail, departmentName, position, employeeNumber,
                 hireDateFrom, hireDateTo, status
             );
         }
@@ -243,64 +243,42 @@ public class BasicEmployeeService implements EmployeeService {
      * 정렬 기준에 따라 적절한 Repository 메서드를 호출
      */
     private List<Employee> fetchEmployeesBySortCriteria(
-        String sortBy, String nameOrEmail, Long departmentId, String position,
+        String sortField, String nameOrEmail, String departmentName, String position,
         String employeeNumber, LocalDate hireDateFrom, LocalDate hireDateTo,
-        EmployeeStatus status, Long lastId, boolean isDescending, Pageable pageable) {
-
-        // 디버깅 로그 추가
-        System.out.println("=== Repository 호출 디버깅 ===");
-        System.out.println("sortBy: " + sortBy);
-        System.out.println("isDescending: " + isDescending);
-        System.out.println("lastId: " + lastId);
+        EmployeeStatus status, Long idAfter, boolean isDescending, Pageable pageable) {
 
         // 이전 페이지의 마지막 정렬 값 추출
-        Object lastSortValue = extractLastSortValue(lastId, sortBy);
-        System.out.println("lastSortValue: " + lastSortValue);
+        Object lastSortValue = extractLastSortValue(idAfter, sortField);
 
         List<Employee> result;
 
         // switch 문에서 어떤 분기로 가는지 확인
-        switch (sortBy) {
+        switch (sortField) {
             case "name" -> {
-                System.out.println("name으로 정렬 Repository 호출");
                 result = employeeRepository.findEmployeesWithCursorByName(
-                    nameOrEmail, departmentId, position, employeeNumber,
-                    hireDateFrom, hireDateTo, status, lastId, (String) lastSortValue,
+                    nameOrEmail, departmentName, position, employeeNumber,
+                    hireDateFrom, hireDateTo, status, idAfter, (String) lastSortValue,
                     isDescending, pageable
                 );
             }
             case "hireDate" -> {
-                System.out.println("hireDate로 정렬 Repository 호출");
                 result = employeeRepository.findEmployeesWithCursorByHireDate(
-                    nameOrEmail, departmentId, position, employeeNumber,
-                    hireDateFrom, hireDateTo, status, lastId, (LocalDate) lastSortValue,
+                    nameOrEmail, departmentName, position, employeeNumber,
+                    hireDateFrom, hireDateTo, status, idAfter, (LocalDate) lastSortValue,
                     isDescending, pageable
                 );
             }
             case "employeeNumber" -> {
-                System.out.println("employeeNumber로 정렬 Repository 호출");
                 result = employeeRepository.findEmployeesWithCursorByEmployeeNumber(
-                    nameOrEmail, departmentId, position, employeeNumber,
-                    hireDateFrom, hireDateTo, status, lastId, (String) lastSortValue,
+                    nameOrEmail, departmentName, position, employeeNumber,
+                    hireDateFrom, hireDateTo, status, idAfter, (String) lastSortValue,
                     isDescending, pageable
                 );
             }
             default -> {
-                System.out.println("지원하지 않는 정렬 기준: " + sortBy);
-                throw new IllegalArgumentException("지원하지 않는 정렬 기준입니다: " + sortBy);
+                throw new IllegalArgumentException("지원하지 않는 정렬 기준입니다: " + sortField);
             }
         }
-
-        System.out.println("조회된 결과 수: " + result.size());
-        if (!result.isEmpty()) {
-            Employee first = result.get(0);
-            System.out.println("첫 번째 결과: " + first.getName() + " (ID: " + first.getId() + ")");
-            if (result.size() > 1) {
-                Employee second = result.get(1);
-                System.out.println("두 번째 결과: " + second.getName() + " (ID: " + second.getId() + ")");
-            }
-        }
-        System.out.println("================================");
 
         return result;
     }
@@ -308,19 +286,19 @@ public class BasicEmployeeService implements EmployeeService {
     /**
      * 이전 페이지의 마지막 정렬 값을 추출
      */
-    private Object extractLastSortValue(Long lastId, String sortBy) {
-        if (lastId == null) {
+    private Object extractLastSortValue(Long idAfter, String sortField) {
+        if (idAfter == null) {
             return null;
         }
 
         // 이전 페이지 마지막 직원 정보 조회
-        Optional<Employee> lastEmployee = employeeRepository.findById(lastId);
+        Optional<Employee> lastEmployee = employeeRepository.findById(idAfter);
         if (lastEmployee.isEmpty()) {
             return null;
         }
 
         Employee employee = lastEmployee.get();
-        return switch (sortBy) {
+        return switch (sortField) {
             case "name" -> employee.getName();
             case "hireDate" -> employee.getHireDate();
             case "employeeNumber" -> employee.getEmployeeNumber();
@@ -332,15 +310,15 @@ public class BasicEmployeeService implements EmployeeService {
      * 다음 페이지를 위한 커서 생성
      * 커서는 마지막 요소의 정렬 값과 ID를 Base64로 인코딩한 문자열
      */
-    private String generateNextCursor(Employee lastEmployee, String sortBy) {
+    private String generateNextCursor(Employee lastEmployee, String sortField) {
         try {
             // 커서 정보를 담을 Map 생성
             var cursorInfo = new java.util.HashMap<String, Object>();
             cursorInfo.put("id", lastEmployee.getId());
-            cursorInfo.put("sortBy", sortBy);
+            cursorInfo.put("sortField", sortField);
 
             // 정렬 기준에 따라 값 추가
-            switch (sortBy) {
+            switch (sortField) {
                 case "name" -> cursorInfo.put("sortValue", lastEmployee.getName());
                 case "hireDate" -> cursorInfo.put("sortValue", lastEmployee.getHireDate().toString());
                 case "employeeNumber" -> cursorInfo.put("sortValue", lastEmployee.getEmployeeNumber());
@@ -393,15 +371,12 @@ public class BasicEmployeeService implements EmployeeService {
             // 파일이 존재하는지 확인 후 삭제
             if (java.nio.file.Files.exists(filePath)) {
                 java.nio.file.Files.delete(filePath);
-                System.out.println("프로필 이미지 파일 삭제 완료: " + filePath);
             } else {
-                System.out.println("삭제할 파일이 존재하지 않음: " + filePath);
             }
 
         } catch (Exception e) {
             // 파일 삭제 실패해도 직원 삭제는 계속 진행
             System.err.println("프로필 이미지 파일 삭제 실패: " + e.getMessage());
-            // 필요시 로깅 프레임워크 사용: log.error("프로필 이미지 삭제 실패", e);
         }
     }
 }

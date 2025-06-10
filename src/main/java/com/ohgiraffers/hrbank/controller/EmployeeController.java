@@ -94,14 +94,12 @@ public class EmployeeController {
 
     /**
      * 직원 목록 조회 (커서 기반 페이지네이션)
-     *
-     * GET /api/employees?nameOrEmail=김&departmentId=1&position=개발자&size=20&sortBy=name&sortDirection=asc
      */
     @GetMapping
     public ResponseEntity<CursorPageResponseEmployeeDto> findEmployees(
         // 검색 조건 파라미터들
         @RequestParam(required = false) String nameOrEmail,
-        @RequestParam(required = false) Long departmentId,
+        @RequestParam(required = false) String departmentName,
         @RequestParam(required = false) String position,
         @RequestParam(required = false) String employeeNumber,
 
@@ -116,25 +114,25 @@ public class EmployeeController {
         @RequestParam(required = false) EmployeeStatus status,
 
         // 정렬 조건
-        @RequestParam(value = "sortField", defaultValue = "name") String sortBy,
+        @RequestParam(value = "sortField", defaultValue = "name") String sortField,
         @RequestParam(defaultValue = "asc") String sortDirection,
 
         // 페이지네이션
-        @RequestParam(required = false) Long lastId,
+        @RequestParam(required = false) Long idAfter,
         @RequestParam(defaultValue = "30") Integer size
     ) {
         // 요청 파라미터를 EmployeeSearchRequest로 변환
         EmployeeSearchRequest searchRequest = new EmployeeSearchRequest(
             nameOrEmail,
-            departmentId,
+            departmentName,
             position,
             employeeNumber,
             hireDateFrom,
             hireDateTo,
             status,
-            sortBy,
+            sortField,
             sortDirection,
-            lastId,
+            idAfter,
             size
         );
 
@@ -156,7 +154,7 @@ public class EmployeeController {
 
         // 기존 검색 조건들은 유지 (커서에 포함되지 않으므로 다시 전달 필요)
         @RequestParam(required = false) String nameOrEmail,
-        @RequestParam(required = false) Long departmentId,
+        @RequestParam(required = false) String departmentName,
         @RequestParam(required = false) String position,
         @RequestParam(required = false) String employeeNumber,
         @RequestParam(required = false)
@@ -165,21 +163,21 @@ public class EmployeeController {
         @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate hireDateTo,
         @RequestParam(required = false) EmployeeStatus status
     ) {
-        // 커서 디코딩을 통해 lastId와 정렬 정보 추출
+        // 커서 디코딩을 통해 idAfter와 정렬 정보 추출
         CursorInfo cursorInfo = decodeCursor(cursor);
 
         // 검색 요청 생성
         EmployeeSearchRequest searchRequest = new EmployeeSearchRequest(
             nameOrEmail,
-            departmentId,
+            departmentName,
             position,
             employeeNumber,
             hireDateFrom,
             hireDateTo,
             status,
-            cursorInfo.sortBy(),
+            cursorInfo.sortField(),
             cursorInfo.sortDirection(),
-            cursorInfo.lastId(),
+            cursorInfo.idAfter(),
             size
         );
 
@@ -204,10 +202,10 @@ public class EmployeeController {
             @SuppressWarnings("unchecked")
             java.util.Map<String, Object> cursorMap = objectMapper.readValue(decodedJson, java.util.Map.class);
 
-            Long lastId = Long.valueOf(cursorMap.get("id").toString());
-            String sortBy = cursorMap.get("sortBy").toString();
+            Long idAfter = Long.valueOf(cursorMap.get("id").toString());
+            String sortField = cursorMap.get("sortField").toString();
 
-            return new CursorInfo(lastId, sortBy, "asc"); // 기본값으로 asc 설정
+            return new CursorInfo(idAfter, sortField, "asc"); // 기본값으로 asc 설정
 
         } catch (Exception e) {
             throw new IllegalArgumentException("잘못된 커서 형식입니다: " + cursor, e);
@@ -217,7 +215,7 @@ public class EmployeeController {
     /**
      * 커서 정보를 담는 내부 클래스
      */
-    private record CursorInfo(Long lastId, String sortBy, String sortDirection) {}
+    private record CursorInfo(Long idAfter, String sortField, String sortDirection) {}
 
     private Optional<FileCreateRequest> resolveProfileRequest(MultipartFile profileFile) {
         if (profileFile.isEmpty()) {

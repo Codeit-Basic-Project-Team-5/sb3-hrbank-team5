@@ -26,13 +26,13 @@ public interface EmployeeRepository extends JpaRepository<Employee, Long> {
      * 커서 기반 페이지네이션으로 직원 목록 조회 (이름 기준 정렬)
      *
      * @param nameOrEmail 이름 또는 이메일 검색어 (부분 일치)
-     * @param departmentId 부서 ID
+     * @param departmentName 부서명
      * @param position 직함 검색어 (부분 일치)
      * @param employeeNumber 사원번호 검색어 (부분 일치)
      * @param hireDateFrom 입사일 시작 범위
      * @param hireDateTo 입사일 끝 범위
      * @param status 직원 상태
-     * @param lastId 이전 페이지 마지막 ID (커서)
+     * @param idAfter 이전 페이지 마지막 ID (커서)
      * @param lastSortValue 이전 페이지 마지막 정렬 값
      * @param isDescending 내림차순 여부
      * @param pageable 페이지 정보
@@ -46,19 +46,19 @@ public interface EmployeeRepository extends JpaRepository<Employee, Long> {
             (:nameOrEmail IS NULL OR 
              LOWER(e.name) LIKE LOWER(CONCAT('%', :nameOrEmail, '%')) OR 
              LOWER(e.email) LIKE LOWER(CONCAT('%', :nameOrEmail, '%')))
-        AND (:departmentId IS NULL OR e.department.id = :departmentId)
+        AND (:departmentName IS NULL OR LOWER(e.department.name) LIKE LOWER(CONCAT('%', :departmentName, '%')))
         AND (:position IS NULL OR LOWER(e.position) LIKE LOWER(CONCAT('%', :position, '%')))
         AND (:employeeNumber IS NULL OR LOWER(e.employeeNumber) LIKE LOWER(CONCAT('%', :employeeNumber, '%')))
         AND (:hireDateFrom IS NULL OR e.hireDate >= :hireDateFrom)
         AND (:hireDateTo IS NULL OR e.hireDate <= :hireDateTo)
         AND (:status IS NULL OR e.status = :status)
         AND (
-            :lastId IS NULL OR 
+            :idAfter IS NULL OR 
             (
                 CASE WHEN :isDescending = true THEN
-                    (e.name < :lastSortValue OR (e.name = :lastSortValue AND e.id < :lastId))
+                    (e.name < :lastSortValue OR (e.name = :lastSortValue AND e.id < :idAfter))
                 ELSE
-                    (e.name > :lastSortValue OR (e.name = :lastSortValue AND e.id > :lastId))
+                    (e.name > :lastSortValue OR (e.name = :lastSortValue AND e.id > :idAfter))
                 END
             )
         )
@@ -70,13 +70,13 @@ public interface EmployeeRepository extends JpaRepository<Employee, Long> {
         """)
     List<Employee> findEmployeesWithCursorByName(
         @Param("nameOrEmail") String nameOrEmail,
-        @Param("departmentId") Long departmentId,
+        @Param("departmentName") String departmentName,
         @Param("position") String position,
         @Param("employeeNumber") String employeeNumber,
         @Param("hireDateFrom") LocalDate hireDateFrom,
         @Param("hireDateTo") LocalDate hireDateTo,
         @Param("status") EmployeeStatus status,
-        @Param("lastId") Long lastId,
+        @Param("idAfter") Long idAfter,
         @Param("lastSortValue") String lastSortValue,
         @Param("isDescending") boolean isDescending,
         Pageable pageable
@@ -93,19 +93,19 @@ public interface EmployeeRepository extends JpaRepository<Employee, Long> {
             (:nameOrEmail IS NULL OR 
              LOWER(e.name) LIKE LOWER(CONCAT('%', :nameOrEmail, '%')) OR 
              LOWER(e.email) LIKE LOWER(CONCAT('%', :nameOrEmail, '%')))
-        AND (:departmentId IS NULL OR e.department.id = :departmentId)
+        AND (:departmentName IS NULL OR LOWER(e.department.name) LIKE LOWER(CONCAT('%', :departmentName, '%')))
         AND (:position IS NULL OR LOWER(e.position) LIKE LOWER(CONCAT('%', :position, '%')))
         AND (:employeeNumber IS NULL OR LOWER(e.employeeNumber) LIKE LOWER(CONCAT('%', :employeeNumber, '%')))
         AND (:hireDateFrom IS NULL OR e.hireDate >= :hireDateFrom)
         AND (:hireDateTo IS NULL OR e.hireDate <= :hireDateTo)
         AND (:status IS NULL OR e.status = :status)
         AND (
-            :lastId IS NULL OR 
+            :idAfter IS NULL OR 
             (
                 CASE WHEN :isDescending = true THEN
-                    (e.hireDate < :lastSortValue OR (e.hireDate = :lastSortValue AND e.id < :lastId))
+                    (e.hireDate < :lastSortValue OR (e.hireDate = :lastSortValue AND e.id < :idAfter))
                 ELSE
-                    (e.hireDate > :lastSortValue OR (e.hireDate = :lastSortValue AND e.id > :lastId))
+                    (e.hireDate > :lastSortValue OR (e.hireDate = :lastSortValue AND e.id > :idAfter))
                 END
             )
         )
@@ -117,13 +117,13 @@ public interface EmployeeRepository extends JpaRepository<Employee, Long> {
         """)
     List<Employee> findEmployeesWithCursorByHireDate(
         @Param("nameOrEmail") String nameOrEmail,
-        @Param("departmentId") Long departmentId,
+        @Param("departmentName") String departmentName,
         @Param("position") String position,
         @Param("employeeNumber") String employeeNumber,
         @Param("hireDateFrom") LocalDate hireDateFrom,
         @Param("hireDateTo") LocalDate hireDateTo,
         @Param("status") EmployeeStatus status,
-        @Param("lastId") Long lastId,
+        @Param("idAfter") Long idAfter,
         @Param("lastSortValue") LocalDate lastSortValue,
         @Param("isDescending") boolean isDescending,
         Pageable pageable
@@ -140,19 +140,19 @@ public interface EmployeeRepository extends JpaRepository<Employee, Long> {
             (:nameOrEmail IS NULL OR 
              LOWER(e.name) LIKE LOWER(CONCAT('%', :nameOrEmail, '%')) OR 
              LOWER(e.email) LIKE LOWER(CONCAT('%', :nameOrEmail, '%')))
-        AND (:departmentId IS NULL OR e.department.id = :departmentId)
+        AND (:departmentName IS NULL OR LOWER(e.department.name) LIKE LOWER(CONCAT('%', :departmentName, '%')))
         AND (:position IS NULL OR LOWER(e.position) LIKE LOWER(CONCAT('%', :position, '%')))
         AND (:employeeNumber IS NULL OR LOWER(e.employeeNumber) LIKE LOWER(CONCAT('%', :employeeNumber, '%')))
         AND (:hireDateFrom IS NULL OR e.hireDate >= :hireDateFrom)
         AND (:hireDateTo IS NULL OR e.hireDate <= :hireDateTo)
         AND (:status IS NULL OR e.status = :status)
         AND (
-            :lastId IS NULL OR 
+            :idAfter IS NULL OR 
             (
                 CASE WHEN :isDescending = true THEN
-                    (e.employeeNumber < :lastSortValue OR (e.employeeNumber = :lastSortValue AND e.id < :lastId))
+                    (e.employeeNumber < :lastSortValue OR (e.employeeNumber = :lastSortValue AND e.id < :idAfter))
                 ELSE
-                    (e.employeeNumber > :lastSortValue OR (e.employeeNumber = :lastSortValue AND e.id > :lastId))
+                    (e.employeeNumber > :lastSortValue OR (e.employeeNumber = :lastSortValue AND e.id > :idAfter))
                 END
             )
         )
@@ -164,13 +164,13 @@ public interface EmployeeRepository extends JpaRepository<Employee, Long> {
         """)
     List<Employee> findEmployeesWithCursorByEmployeeNumber(
         @Param("nameOrEmail") String nameOrEmail,
-        @Param("departmentId") Long departmentId,
+        @Param("departmentName") String departmentName,
         @Param("position") String position,
         @Param("employeeNumber") String employeeNumber,
         @Param("hireDateFrom") LocalDate hireDateFrom,
         @Param("hireDateTo") LocalDate hireDateTo,
         @Param("status") EmployeeStatus status,
-        @Param("lastId") Long lastId,
+        @Param("idAfter") Long idAfter,
         @Param("lastSortValue") String lastSortValue,
         @Param("isDescending") boolean isDescending,
         Pageable pageable
@@ -185,7 +185,7 @@ public interface EmployeeRepository extends JpaRepository<Employee, Long> {
             (:nameOrEmail IS NULL OR 
              LOWER(e.name) LIKE LOWER(CONCAT('%', :nameOrEmail, '%')) OR 
              LOWER(e.email) LIKE LOWER(CONCAT('%', :nameOrEmail, '%')))
-        AND (:departmentId IS NULL OR e.department.id = :departmentId)
+        AND (:departmentName IS NULL OR LOWER(e.department.name) LIKE LOWER(CONCAT('%', :departmentName, '%')))
         AND (:position IS NULL OR LOWER(e.position) LIKE LOWER(CONCAT('%', :position, '%')))
         AND (:employeeNumber IS NULL OR LOWER(e.employeeNumber) LIKE LOWER(CONCAT('%', :employeeNumber, '%')))
         AND (:hireDateFrom IS NULL OR e.hireDate >= :hireDateFrom)
@@ -194,7 +194,7 @@ public interface EmployeeRepository extends JpaRepository<Employee, Long> {
         """)
     Long countEmployeesWithConditions(
         @Param("nameOrEmail") String nameOrEmail,
-        @Param("departmentId") Long departmentId,
+        @Param("departmentName") String departmentName,
         @Param("position") String position,
         @Param("employeeNumber") String employeeNumber,
         @Param("hireDateFrom") LocalDate hireDateFrom,
