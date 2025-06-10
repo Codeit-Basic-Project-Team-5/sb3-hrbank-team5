@@ -19,7 +19,7 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @Entity
 @Table(name = "backup_histories")
-public class DataBackup {
+public class Backup {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -42,6 +42,13 @@ public class DataBackup {
     @JoinColumn(name = "file_id")
     private File file;
 
+
+    public Backup(String worker, Instant startedAt, Instant endedAt ,StatusType status) {
+        this.worker = worker;
+        this.startedAt = startedAt;
+        this.status = status;
+        this.endedAt = endedAt;
+    }
 
     public void update(Instant endedAt, StatusType status, File file) {
         boolean anyValueUpdated = false;

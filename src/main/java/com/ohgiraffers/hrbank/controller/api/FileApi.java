@@ -14,7 +14,7 @@ import org.springframework.http.ResponseEntity;
 @Tag(name = "File", description = "파일 API")
 public interface FileApi {
 
-    @Operation(summary = "파일 다운로드", description = "")
+    @Operation(summary = "파일 다운로드")
     @ApiResponses({
         @ApiResponse(
             responseCode = "200", description = "다운로드 성공",
