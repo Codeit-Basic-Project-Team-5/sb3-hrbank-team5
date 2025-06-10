@@ -59,24 +59,4 @@ public record EmployeeSearchRequest(
     public boolean isDescending() {
         return "desc".equalsIgnoreCase(sortDirection);
     }
-
-    /**
-     * 검색 조건이 있는지 확인
-     */
-    public boolean hasSearchCondition() {
-        return nameOrEmail != null ||
-            departmentName != null ||
-            position != null ||
-            employeeNumber != null ||
-            hireDateFrom != null ||
-            hireDateTo != null ||
-            status != null;
-    }
-
-    /**
-     * 부서 검색 조건이 있는지 확인 (ID 또는 이름)
-     */
-    public boolean hasDepartmentCondition() {
-        return departmentName != null && !departmentName.trim().isEmpty();
-    }
 }
