@@ -31,7 +31,7 @@ public class LocalFileStorage implements FileStorage {
     private final Path root;
 
     public LocalFileStorage(
-        @Value("${discodeit.storage.local.root-path}") String rootPath
+        @Value("${hrbank.storage.local.root-path}") String rootPath
     ) {
         this.root = Paths.get(rootPath);
     }
