@@ -22,7 +22,6 @@ public interface DepartmentRepository extends JpaRepository<Department, Integer>
         FROM Department data
         WHERE (:nameOrDescription IS NULL OR data.name LIKE %:nameOrDescription% OR data.description LIKE %:nameOrDescription%)
           AND (:idAfter IS NULL OR data.id > :idAfter)
-        ORDER BY data.id ASC
     """)
     List<Department> findByCursor(
         @Param("nameOrDescription")String nameOrDescription,
