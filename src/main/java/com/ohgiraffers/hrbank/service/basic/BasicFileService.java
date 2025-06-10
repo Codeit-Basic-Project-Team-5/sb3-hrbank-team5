@@ -3,6 +3,7 @@ package com.ohgiraffers.hrbank.service.basic;
 import com.ohgiraffers.hrbank.dto.request.FileCreateRequest;
 import com.ohgiraffers.hrbank.entity.File;
 import com.ohgiraffers.hrbank.repository.FileRepository;
+import com.ohgiraffers.hrbank.service.FileService;
 import com.ohgiraffers.hrbank.storage.FileStorage;
 import java.io.IOException;
 import java.io.OutputStream;
