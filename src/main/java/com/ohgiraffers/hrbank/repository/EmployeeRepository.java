@@ -15,4 +15,7 @@ public interface EmployeeRepository extends JpaRepository<Employee, Long> {
     boolean existsByEmployeeNumber(String employeeNumber);
 
     Optional<Employee> findByEmployeeNumber(String employeeNumber);
+
+    //대시보드 - 총 직원 수 조회
+    long getTotalEmployeeCount();
 }
