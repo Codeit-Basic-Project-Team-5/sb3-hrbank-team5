@@ -11,7 +11,7 @@ import org.springframework.context.annotation.Configuration;
         title = "HR Bank API",
         description = "HR Bank API 문서"),
     servers = @Server(
-        url = "http://localhost:8080/sb/hrbank",
+        url = "http://localhost:8080/",
         description = "Generated server url")
 )
 
