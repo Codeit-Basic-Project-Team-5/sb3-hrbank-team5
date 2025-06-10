@@ -126,6 +126,12 @@ public class BasicDepartmentService implements DepartmentService {
             pageable
         );
 
+        long totalElements;
+        if (keyword.isEmpty()) {
+            totalElements = departmentRepository.count();
+        } else {
+            totalElements = departmentRepository.countByNameOrDescription(keyword);
+        }
         // 다음 페이지 유무 연산
         boolean hasNextPage = departments.size() > size;
         if (hasNextPage){
@@ -149,7 +155,7 @@ public class BasicDepartmentService implements DepartmentService {
             cursor, // 커서
             nextIdAfter,
             size,
-            dtoList.size(),
+            totalElements,
             hasNextPage
         );
     }
