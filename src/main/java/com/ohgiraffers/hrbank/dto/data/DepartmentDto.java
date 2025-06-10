@@ -11,14 +11,14 @@ public record DepartmentDto(
     Long employeeCount
 ) {
 
-    public static DepartmentDto fromEntity(Department department) {
+    public static DepartmentDto fromEntity(Department department, Long employeeCount) {
         if (department == null) return null;
         return new DepartmentDto(
             department.getId(),
             department.getName(),
             department.getDescription(),
             department.getEstablishedDate(),
-            10L
+            employeeCount
             );
     }
 

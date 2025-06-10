@@ -5,7 +5,6 @@ import com.ohgiraffers.hrbank.dto.data.DepartmentDto;
 import com.ohgiraffers.hrbank.dto.request.DepartmentCreateRequest;
 import com.ohgiraffers.hrbank.dto.request.DepartmentUpdateRequest;
 import com.ohgiraffers.hrbank.dto.response.DepartmentPageResponse;
-import com.ohgiraffers.hrbank.entity.Department;
 import com.ohgiraffers.hrbank.service.DepartmentService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -38,9 +37,9 @@ public class DepartmentController implements DepartmentApi {
   public ResponseEntity<DepartmentDto> create(
       @RequestBody DepartmentCreateRequest request
   ) {
-    Department createdDepartment = departmentService.create(request);
+    DepartmentDto createdDepartment = departmentService.create(request);
 
-    return ResponseEntity.status(HttpStatus.CREATED).body(DepartmentDto.fromEntity(createdDepartment));
+    return ResponseEntity.status(HttpStatus.CREATED).body(createdDepartment);
   }
 
   /** 부서 다건 조회
@@ -91,10 +90,7 @@ public class DepartmentController implements DepartmentApi {
       @RequestBody DepartmentUpdateRequest request
   ) {
     return ResponseEntity.status(HttpStatus.OK).
-        body(DepartmentDto.fromEntity(
-            departmentService.update(departmentId,request)
-            )
-        );
+        body(departmentService.update(departmentId, request));
   }
   /** 부서 정보 삭제
    * 입력 :
