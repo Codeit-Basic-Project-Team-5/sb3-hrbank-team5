@@ -1,4 +1,4 @@
-package com.ohgiraffers.hrbank.service.basic;
+package com.ohgiraffers.hrbank.service;
 
 import com.ohgiraffers.hrbank.dto.request.FileCreateRequest;
 import com.ohgiraffers.hrbank.entity.File;

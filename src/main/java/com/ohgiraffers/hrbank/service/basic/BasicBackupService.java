@@ -18,6 +18,7 @@ import com.ohgiraffers.hrbank.repository.EmployeeRepository;
 import com.ohgiraffers.hrbank.repository.FileRepository;
 import com.ohgiraffers.hrbank.storage.FileStorage;
 import com.ohgiraffers.hrbank.service.BackupService;
+import com.ohgiraffers.hrbank.storage.FileStorage;
 import jakarta.servlet.http.HttpServletRequest;
 import java.io.BufferedWriter;
 import java.io.IOException;
@@ -31,6 +32,7 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.TimeZone;
+import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
@@ -50,7 +52,7 @@ public class BasicBackupService implements BackupService {
     private final FileRepository fileRepository;
     private final FileStorage fileStorage;
     private final EmployeeRepository employeeRepository;
-    private @Value("${discodeit.storage.local.root-path}") String root;
+    private @Value("${hrbank.storage.local.root-path}") String root;
 
     /**
      * dataBackupRepository에서 모든 항목을 검색하여 Dto로 반환
@@ -71,17 +73,36 @@ public class BasicBackupService implements BackupService {
 
 
         // 2. size + 1개 조회로 hasNext 판단
-        List<BackupDto> content = backupRepository.findAllByCursor(
-            backupCursorPageRequest.worker(),
-            backupCursorPageRequest.status(),
-            backupCursorPageRequest.startedAtFrom(),
-            backupCursorPageRequest.startedAtTo(),
-            Instant.parse(backupCursorPageRequest.cursor()),
-            backupCursorPageRequest.idAfter(),
-            pageable
-        ).stream()
-            .map(backupMapper::toDto)
-            .toList();
+        String worker = null;
+        if (backupCursorPageRequest.worker() != null && !backupCursorPageRequest.worker().isBlank()) {
+            worker = "%" + backupCursorPageRequest.worker() + "%";
+        }
+        List<BackupDto> content;
+        if(backupCursorPageRequest.cursor()==null){
+            content = backupRepository.findAllWithoutCursor(
+                    worker,
+                    backupCursorPageRequest.status(),
+                    backupCursorPageRequest.startedAtFrom(),
+                    backupCursorPageRequest.startedAtTo(),
+                    pageable
+                ).stream()
+                .map(backupMapper::toDto)
+                .collect(Collectors.toList());
+        }
+        else{
+            content = backupRepository.findAllWithCursor(
+                    worker,
+                    backupCursorPageRequest.status(),
+                    backupCursorPageRequest.startedAtFrom(),
+                    backupCursorPageRequest.startedAtTo(),
+                    Instant.parse(backupCursorPageRequest.cursor()),
+                    backupCursorPageRequest.idAfter(),
+                    pageable
+                ).stream()
+                .map(backupMapper::toDto)
+                .collect(Collectors.toList());
+        }
+
         boolean hasNext = content.size() > backupCursorPageRequest.size();
 
         //3. nextCursor 찾기
@@ -100,11 +121,13 @@ public class BasicBackupService implements BackupService {
             .orElse(null);
 
         // 5. size 찾기
-        int size = content.size();
+        int size = content.size()-1;
 
         // 6. totalElements 찾기
         Long totalElements = backupRepository.count();
 
+        // 7. 마지막 행 제거
+        content.remove(content.size() - 1);
 
         return new CursorPageResponseBackupDto(content,nextCursor,nextIdAfter,size,totalElements,hasNext);
     }
