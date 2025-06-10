@@ -22,7 +22,7 @@ import org.springframework.stereotype.Component;
 
 @Component
 @ConditionalOnProperty(
-    prefix = "discodeit.storage",
+    prefix = "hrbank.storage",
     name = "type",
     havingValue = "local"
 )
