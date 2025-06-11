@@ -36,7 +36,7 @@ public class ChangeLog {
     private String type;
 
     @Column(name = "employee_id", nullable = false)
-    private String employeeId;
+    private Long employeeId;
 
     @Column(name = "ip_address", length = 50)
     private String ipAddress;
