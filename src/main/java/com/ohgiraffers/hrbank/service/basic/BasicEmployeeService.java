@@ -12,6 +12,12 @@ import com.ohgiraffers.hrbank.entity.Department;
 import com.ohgiraffers.hrbank.entity.Employee;
 import com.ohgiraffers.hrbank.entity.EmployeeStatus;
 import com.ohgiraffers.hrbank.entity.File;
+import com.ohgiraffers.hrbank.exception.DepartmentNotFoundException;
+import com.ohgiraffers.hrbank.exception.DuplicateEmailException;
+import com.ohgiraffers.hrbank.exception.EmployeeNotFoundException;
+import com.ohgiraffers.hrbank.exception.FileProcessingException;
+import com.ohgiraffers.hrbank.exception.InvalidCursorException;
+import com.ohgiraffers.hrbank.exception.InvalidRequestException;
 import com.ohgiraffers.hrbank.mapper.EmployeeMapper;
 import com.ohgiraffers.hrbank.repository.DepartmentRepository;
 import com.ohgiraffers.hrbank.repository.EmployeeRepository;
@@ -57,119 +63,108 @@ public class BasicEmployeeService implements EmployeeService {
     public EmployeeDto create(EmployeeCreateRequest employeeCreateRequest,
         Optional<FileCreateRequest> optionalFileCreateRequest) {
         Department department = departmentRepository.findDepartmentById(employeeCreateRequest.departmentId());
+        if (department == null) {
+            throw new DepartmentNotFoundException(employeeCreateRequest.departmentId());
+        }
+
+        if (employeeRepository.existsByEmail(employeeCreateRequest.email())) {
+            throw new DuplicateEmailException(employeeCreateRequest.email());
+        }
 
         String memo = employeeCreateRequest.memo();
 
         File nullableProfile = optionalFileCreateRequest
-            .map(profileRequest -> {
-                String fileName = profileRequest.fileName();
-                String contentType = profileRequest.contentType();
-                byte[] bytes = profileRequest.bytes();
-
-                // 파일 확장자 추출
-                String extension = extractExtension(fileName);
-
-                // 파일 엔티티 생성 및 저장
-                File file = new File(fileName, contentType, (long) bytes.length);
-                File savedFile = fileRepository.save(file);
-
-                // 실제 파일 저장 (FileStorage 인터페이스에 맞게)
-                try (OutputStream out = fileStorage.put(savedFile.getId(), extension)) {
-                    out.write(bytes);
-                } catch (IOException e) {
-                    throw new RuntimeException("프로필 이미지 저장 실패: " + fileName, e);
-                }
-
-                return savedFile;
-            })
+            .map(profileRequest -> processProfileImage(profileRequest))
             .orElse(null);
 
         Employee employee = new Employee(
             employeeCreateRequest.name(),
             employeeCreateRequest.email(),
-            generateEmployeeNumber(),   // 사원번호 자동 생성
+            "TEMP",   // 임시 사원번호
             department,
             employeeCreateRequest.position(),
             employeeCreateRequest.hireDate(),
             nullableProfile
         );
-       employeeRepository.save(employee);
 
-        return employeeMapper.toDto(employee);
+        Employee savedEmployee = employeeRepository.save(employee);
+
+        String actualEmployeeNumber = generateEmployeeNumber(savedEmployee.getId());
+        savedEmployee.setEmployeeNumber(actualEmployeeNumber);
+
+        Employee finalEmployee = employeeRepository.save(savedEmployee);
+
+        return employeeMapper.toDto(finalEmployee);
     }
 
     @Override
     public EmployeeDto update(Long employeeId, EmployeeUpdateRequest employeeUpdateRequest,
         Optional<FileCreateRequest> optionalFileCreateRequest) {
         Employee employee = employeeRepository.findById(employeeId)
-            .orElseThrow(() -> new NoSuchElementException("Employee with id " + employeeId + " not found"));
+            .orElseThrow(() -> new EmployeeNotFoundException(employeeId));
 
         String newName = employeeUpdateRequest.name();
         String newEmail = employeeUpdateRequest.email();
         if (employeeRepository.existsByEmail(newEmail) && !employee.getEmail().equals(newEmail)) {
-            throw new IllegalArgumentException("Employee with email " + newEmail + " already exists");
+            throw new DuplicateEmailException(newEmail);
         }
 
         Department newDepartment = departmentRepository.findDepartmentById(employeeUpdateRequest.departmentId());
+        if (newDepartment == null) {
+            throw new DepartmentNotFoundException(employeeUpdateRequest.departmentId());
+        }
         String newPosition = employeeUpdateRequest.position();
         LocalDate newHireDate = employeeUpdateRequest.hireDate();
-        EmployeeStatus newStatus = EmployeeStatus.valueOf(employeeUpdateRequest.status());
+        EmployeeStatus newStatus;
+        try {
+            newStatus = EmployeeStatus.valueOf(employeeUpdateRequest.status());
+        } catch (IllegalArgumentException e) {
+            throw new InvalidRequestException(
+                String.format("잘못된 직원 상태입니다: %s", employeeUpdateRequest.status())
+            );
+        }
 
         File nullableProfile = optionalFileCreateRequest
-            .map(profileRequest -> {
-                String fileName = profileRequest.fileName();
-                String contentType = profileRequest.contentType();
-                byte[] bytes = profileRequest.bytes();
-
-                // 파일 확장자 추출
-                String extension = extractExtension(fileName);
-
-                // 파일 엔티티 생성 및 저장
-                File file = new File(fileName, contentType, (long) bytes.length);
-                File savedFile = fileRepository.save(file);
-
-                // 실제 파일 저장 (FileStorage 인터페이스에 맞게)
-                try (OutputStream out = fileStorage.put(savedFile.getId(), extension)) {
-                    out.write(bytes);
-                } catch (IOException e) {
-                    throw new RuntimeException("프로필 이미지 저장 실패: " + fileName, e);
-                }
-
-                return savedFile;
-            })
+            .map(profileRequest -> processProfileImage(profileRequest))
             .orElse(null);
 
         String newMemo = employeeUpdateRequest.memo();
 
         employee.update(newName, newEmail, newDepartment, newPosition, newHireDate, newStatus, nullableProfile);
+        employeeRepository.save(employee);
+
         return employeeMapper.toDto(employee);
     }
 
     @Override
     public void delete(Long employeeId) {
         Employee employee = employeeRepository.findById(employeeId)
-            .orElseThrow(() -> new NoSuchElementException("Employee with id " + employeeId + " not found"));
+            .orElseThrow(() -> new EmployeeNotFoundException(employeeId));
 
         // 프로필 이미지 정보를 미리 저장 (Employee 삭제 전에)
         File profileImageToDelete = employee.getProfileImage();
 
-        // 1. 먼저 Employee 삭제 (외래키 제약 조건 해결)
-        employeeRepository.deleteById(employeeId);
+        try {
+            // 1. 먼저 Employee 삭제 (외래키 제약 조건 해결)
+            employeeRepository.deleteById(employeeId);
 
-        // 2. 그 다음에 프로필 이미지 삭제 (있는 경우에만)
-        if (profileImageToDelete != null) {
-            // 실제 파일 삭제 처리
-            deletePhysicalFile(profileImageToDelete);
+            // 2. 그 다음에 프로필 이미지 삭제 (있는 경우에만)
+            if (profileImageToDelete != null) {
+                // 실제 파일 삭제 처리
+                deletePhysicalFile(profileImageToDelete);
 
-            // File 엔티티 삭제
-            fileRepository.deleteById(profileImageToDelete.getId());
+                // File 엔티티 삭제
+                fileRepository.deleteById(profileImageToDelete.getId());
+            }
+        } catch (Exception e) {
+            throw new RuntimeException("직원 삭제 중 오류가 발생했습니다.", e);
         }
     }
 
     @Override
     public EmployeeDto find(Long employeeId) {
         Employee employee = employeeRepository.findById(employeeId)
-            .orElseThrow(() -> new NoSuchElementException("Employee with id " + employeeId + " not found"));
+            .orElseThrow(() -> new EmployeeNotFoundException(employeeId));
 
         return employeeMapper.toDto(employee);
     }
@@ -195,10 +190,14 @@ public class BasicEmployeeService implements EmployeeService {
         Object lastSortValue = null;
 
         if (searchRequest.cursor() != null && !searchRequest.cursor().isEmpty()) {
-            // cursor가 있으면 cursor 우선 사용
-            CursorInfo cursorInfo = decodeCursor(searchRequest.cursor());
-            idAfter = cursorInfo.idAfter();
-            lastSortValue = cursorInfo.sortValue();
+            try {
+                // cursor가 있으면 cursor 우선 사용
+                CursorInfo cursorInfo = decodeCursor(searchRequest.cursor());
+                idAfter = cursorInfo.idAfter();
+                lastSortValue = cursorInfo.sortValue();
+            } catch (Exception e) {
+                throw new InvalidCursorException("잘못된 커서 형식입니다: " + searchRequest.cursor());
+            }
         } else if (searchRequest.idAfter() != null) {
             // cursor가 없으면 idAfter 사용 (기존 방식)
             idAfter = searchRequest.idAfter();
@@ -254,6 +253,40 @@ public class BasicEmployeeService implements EmployeeService {
         );
     }
 
+    // =================================================================
+    // Private 헬퍼 메서드들
+    // =================================================================
+
+    /**
+     * 프로필 이미지 처리 메서드
+     */
+    private File processProfileImage(FileCreateRequest profileRequest) {
+        String fileName = profileRequest.fileName();
+        String contentType = profileRequest.contentType();
+        byte[] bytes = profileRequest.bytes();
+
+        // 파일 확장자 추출
+        String extension = extractExtension(fileName);
+
+        try {
+            // 파일 엔티티 생성 및 저장
+            File file = new File(fileName, contentType, (long) bytes.length);
+            File savedFile = fileRepository.save(file);
+
+            // 실제 파일 저장 (FileStorage 인터페이스에 맞게)
+            try (OutputStream out = fileStorage.put(savedFile.getId(), extension)) {
+                out.write(bytes);
+            } catch (IOException e) {
+                throw new RuntimeException("프로필 이미지 저장 실패: " + fileName, e);
+            }
+
+            return savedFile;
+
+        } catch (Exception e) {
+            throw new FileProcessingException(fileName, e);
+        }
+    }
+
     /**
      * Cursor 디코딩 메서드
      */
@@ -280,7 +313,7 @@ public class BasicEmployeeService implements EmployeeService {
             return new CursorInfo(lastId, sortBy, typedSortValue);
 
         } catch (Exception e) {
-            throw new IllegalArgumentException("잘못된 커서 형식입니다: " + cursor, e);
+            throw new InvalidCursorException("잘못된 커서 형식입니다: " + cursor);
         }
     }
 
@@ -295,11 +328,17 @@ public class BasicEmployeeService implements EmployeeService {
     private Object convertSortValue(Object sortValue, String sortBy) {
         if (sortValue == null) return null;
 
-        return switch (sortBy) {
-            case "name", "employeeNumber" -> sortValue.toString();
-            case "hireDate" -> LocalDate.parse(sortValue.toString());
-            default -> sortValue;
-        };
+        try {
+            return switch (sortBy) {
+                case "name", "employeeNumber" -> sortValue.toString();
+                case "hireDate" -> LocalDate.parse(sortValue.toString());
+                default -> {
+                    throw new InvalidRequestException("지원하지 않는 정렬 기준입니다: " + sortBy);
+                }
+            };
+        } catch (Exception e) {
+            throw new InvalidCursorException("커서의 정렬 값 변환에 실패했습니다.");
+        }
     }
 
     /**
@@ -310,25 +349,29 @@ public class BasicEmployeeService implements EmployeeService {
         String employeeNumber, LocalDate hireDateFrom, LocalDate hireDateTo,
         EmployeeStatus status, Long idAfter, Object lastSortValue, boolean isDescending, Pageable pageable) {
 
-        return switch (sortField) {
-            case "name" -> employeeRepository.findEmployeesWithCursorByName(
+        try {
+            return switch (sortField) {
+                case "name" -> employeeRepository.findEmployeesWithCursorByName(
                     nameOrEmail, departmentName, position, employeeNumber,
                     hireDateFrom, hireDateTo, status, idAfter, (String) lastSortValue,
                     isDescending, pageable
-            );
-            case "hireDate" -> employeeRepository.findEmployeesWithCursorByHireDate(
+                );
+                case "hireDate" -> employeeRepository.findEmployeesWithCursorByHireDate(
                     nameOrEmail, departmentName, position, employeeNumber,
                     hireDateFrom, hireDateTo, status, idAfter, (LocalDate) lastSortValue,
                     isDescending, pageable
-            );
-            case "employeeNumber" -> employeeRepository.findEmployeesWithCursorByEmployeeNumber(
+                );
+                case "employeeNumber" -> employeeRepository.findEmployeesWithCursorByEmployeeNumber(
                     nameOrEmail, departmentName, position, employeeNumber,
                     hireDateFrom, hireDateTo, status, idAfter, (String) lastSortValue,
                     isDescending, pageable
-            );
+                );
 
-            default -> throw new IllegalArgumentException("지원하지 않는 정렬 기준입니다: " + sortField);
-        };
+                default -> throw new InvalidRequestException("지원하지 않는 정렬 기준입니다: " + sortField);
+            };
+        } catch (Exception e) {
+            throw new RuntimeException("직원 목록 조회 중 오류가 발생했습니다.", e);
+        }
     }
 
     /**
@@ -370,6 +413,7 @@ public class BasicEmployeeService implements EmployeeService {
                 case "name" -> cursorInfo.put("sortValue", lastEmployee.getName());
                 case "hireDate" -> cursorInfo.put("sortValue", lastEmployee.getHireDate().toString());
                 case "employeeNumber" -> cursorInfo.put("sortValue", lastEmployee.getEmployeeNumber());
+                default -> throw new InvalidRequestException("지원하지 않는 정렬 기준입니다: " + sortField);
             }
 
             // JSON으로 직렬화 후 Base64 인코딩
@@ -384,15 +428,9 @@ public class BasicEmployeeService implements EmployeeService {
     /**
      * 사원번호 자동 생성 (예: EMP-2025-001)
      */
-    private String generateEmployeeNumber() {
-        // 현재 연도 기준으로 생성
+    private String generateEmployeeNumber(Long employeeId) {
         int year = LocalDate.now().getYear();
-
-        // 해당 연도의 기존 직원 수 + 1
-        long count = employeeRepository.count();
-        String sequence = String.format("%03d", count + 1);
-
-        return String.format("EMP-%d-%s", year, sequence);
+        return String.format("EMP-%d-%d", year, employeeId);
     }
 
     /**

@@ -1,10 +1,17 @@
 package com.ohgiraffers.hrbank.dto.response;
 
-import java.time.Instant;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
 public record ChangeLogDiffResponse(
+    @JsonProperty("propertyName")
     String fieldName,
+
+    @JsonProperty("before")
     String oldValue,
-    String newValue,
-    Instant createdAt
-) { }
+
+    @JsonProperty("after")
+    String newValue
+
+) {
+
+}

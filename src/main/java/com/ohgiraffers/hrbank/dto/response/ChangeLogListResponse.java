@@ -3,10 +3,12 @@ package com.ohgiraffers.hrbank.dto.response;
 import java.time.Instant;
 
 public record ChangeLogListResponse(
-    Long   id,
+    Long id,
     String type,
-    String employeeId,
+    String employeeNumber,
     String memo,
     String ipAddress,
-    Instant updatedAt
-) { }
+    Instant at
+) {
+
+}
