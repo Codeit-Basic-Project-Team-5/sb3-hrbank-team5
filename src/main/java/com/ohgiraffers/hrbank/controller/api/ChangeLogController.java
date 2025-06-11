@@ -35,23 +35,38 @@ public class ChangeLogController {
             .body(service.registerChangeLog(dto, request));
     }
 
-    // iso => 날짜 포맷팅
     @GetMapping
     public ResponseEntity<ChangeLogCursorResponse> listByCursor(
         @RequestParam(required = false)
         @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME)
         Instant cursor,
         @RequestParam(defaultValue = "30") int size,
-        // Swagger 기본값: at
         @RequestParam(defaultValue = "at") String sortField,
-        @RequestParam(defaultValue = "desc") String sortDirection
+
+        @RequestParam(defaultValue = "desc") String sortDirection,
+
+        @RequestParam(required = false) String employeeNumber,
+
+        @RequestParam(required = false) String memo,
+
+        @RequestParam(required = false) String ipAddress,
+
+        @RequestParam(required = false) String type,
+
+        @RequestParam(required = false) Instant atFrom,
+
+        @RequestParam(required = false) Instant atTo
     ) {
         // swagger 명세에선 "at" 이지만, 내부 엔티티 필드는 updatedAt 이므로 매핑
         if ("at".equals(sortField)) {
             sortField = "updatedAt";
         }
         return ResponseEntity.ok(
-            service.searchWithCursor(cursor, size, sortField, sortDirection)
+            service.searchWithCursor(
+                cursor, size, sortField, sortDirection,
+                employeeNumber, memo, ipAddress, type,
+                atFrom, atTo
+            )
         );
     }
 
