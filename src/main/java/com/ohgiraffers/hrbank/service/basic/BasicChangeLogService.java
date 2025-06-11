@@ -2,9 +2,9 @@ package com.ohgiraffers.hrbank.service.basic;
 
 import com.ohgiraffers.hrbank.dto.request.ChangeLogRequest;
 import com.ohgiraffers.hrbank.dto.response.ChangeLogCursorResponse;
-import com.ohgiraffers.hrbank.dto.response.ChangeLogListResponse;
 import com.ohgiraffers.hrbank.dto.response.ChangeLogDetailResponse;
 import com.ohgiraffers.hrbank.dto.response.ChangeLogDiffResponse;
+import com.ohgiraffers.hrbank.dto.response.ChangeLogListResponse;
 import com.ohgiraffers.hrbank.entity.ChangeLog;
 import com.ohgiraffers.hrbank.entity.ChangeLogDiff;
 import com.ohgiraffers.hrbank.entity.Employee;
@@ -43,7 +43,7 @@ public class BasicChangeLogService implements ChangeLogService {
         String ipAddress = getIpAddress(request);
 
         ChangeLog changeLog = changeLogMapper.toEntity(dto);
-        changeLog.setEmployeeId(emp.getEmployeeNumber());
+        changeLog.setEmployeeId(emp.getId());
         changeLog.setIpAddress(ipAddress);
 
         List<ChangeLogDiff> diffEntities = changeLogMapper.toDiffEntityList(changeLog, dto.diffs());
@@ -55,7 +55,8 @@ public class BasicChangeLogService implements ChangeLogService {
 
     @Override
     @Transactional(readOnly = true)
-    public ChangeLogCursorResponse searchWithCursor(Instant cursor, int size, String sortField, String sortDir) {
+    public ChangeLogCursorResponse searchWithCursor(Instant cursor, int size, String sortField,
+        String sortDir) {
         Instant effectiveCursor;
         if (cursor != null) {
             effectiveCursor = cursor;
@@ -65,21 +66,21 @@ public class BasicChangeLogService implements ChangeLogService {
 
         Sort.Direction direction = Sort.Direction.fromString(sortDir);
         Sort sortOption = Sort.by(new Sort.Order(direction, sortField))
-                .and(Sort.by(direction, "id"));
+            .and(Sort.by(direction, "id"));
 
         Pageable page = PageRequest.of(0, size + 1, sortOption);
         List<ChangeLogListResponse> fetched = changeLogRepository
-                .searchWithCursor(effectiveCursor, page)
-                .stream()
-                .map(log -> new ChangeLogListResponse(
-                        log.getId(),
-                        log.getType(),
-                        String.valueOf(log.getEmployeeId()),
-                        log.getMemo(),
-                        log.getIpAddress(),
-                        log.getUpdatedAt()
-                ))
-                .toList();
+            .searchWithCursor(effectiveCursor, page)
+            .stream()
+            .map(log -> new ChangeLogListResponse(
+                log.getId(),
+                log.getType(),
+                log.getEmployee().getEmployeeNumber(),    // → employeeNumber
+                log.getMemo(),
+                log.getIpAddress(),
+                log.getUpdatedAt()      // → at
+            ))
+            .toList();
 
         boolean hasNext;
         if (fetched.size() > size) {
@@ -97,7 +98,7 @@ public class BasicChangeLogService implements ChangeLogService {
 
         Instant nextCursor;
         if (hasNext) {
-            nextCursor = pageContent.get(pageContent.size() - 1).updatedAt();
+            nextCursor = pageContent.get(pageContent.size() - 1).at();
         } else {
             nextCursor = null;
         }
@@ -112,12 +113,12 @@ public class BasicChangeLogService implements ChangeLogService {
         long total = changeLogRepository.count();
 
         return new ChangeLogCursorResponse(
-                pageContent,
-                nextCursor,
-                nextIdAfter,
-                size,
-                total,
-                hasNext
+            pageContent,
+            nextCursor,
+            nextIdAfter,
+            size,
+            total,
+            hasNext
         );
     }
 
@@ -133,18 +134,17 @@ public class BasicChangeLogService implements ChangeLogService {
             .map(diff -> new ChangeLogDiffResponse(
                 diff.getFieldName(),
                 diff.getOldValue(),
-                diff.getNewValue(),
-                diff.getCreatedAt()
+                diff.getNewValue()
             ))
             .toList();
 
         return new ChangeLogDetailResponse(
             log.getId(),
             log.getType(),
-            String.valueOf(log.getEmployeeId()),
+            log.getEmployee().getEmployeeNumber(),      // → employeeNumber
             log.getMemo(),
             log.getIpAddress(),
-            log.getUpdatedAt(),
+            log.getUpdatedAt(),       // → at
             diffs
         );
     }
@@ -158,8 +158,7 @@ public class BasicChangeLogService implements ChangeLogService {
             .map(diff -> new ChangeLogDiffResponse(
                 diff.getFieldName(),
                 diff.getOldValue(),
-                diff.getNewValue(),
-                diff.getCreatedAt()
+                diff.getNewValue()
             ))
             .toList();
     }

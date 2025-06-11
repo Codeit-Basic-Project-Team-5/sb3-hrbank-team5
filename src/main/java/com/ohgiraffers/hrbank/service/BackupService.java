@@ -12,5 +12,5 @@ public interface BackupService {
     public CursorPageResponseBackupDto findAll(BackupCursorPageRequest backupCursorPageRequest);
     public BackupDto create(HttpServletRequest request);
     public BackupDto getLatest(StatusType status);
-    BackupDto executeBackup();
+    BackupDto scheduledBackup();
 }
