@@ -8,7 +8,13 @@ import java.util.List;
 
 public interface DashBoardService {
 
-    long getCount(EmployeeStatus status, LocalDate fromDate, LocalDate toDate);
+    long countAllEmployees();
+
+    long countByStatus(EmployeeStatus status);
+
+    long countHiredBetween(EmployeeStatus status, LocalDate from, LocalDate to);
+
+    long countUpdatesBetween(LocalDate from, LocalDate to);
 
     List<EmployeeDistributionDto> getDistribution(String groupBy, EmployeeStatus status);
 
