@@ -214,4 +214,12 @@ public interface EmployeeRepository extends JpaRepository<Employee, Long> {
     List<Object[]> countByPosition(@Param("status") EmployeeStatus status);
 
     Long countByDepartmentId(Long departmentId);
+
+    @Query("""
+        SELECT COUNT(e)
+        FROM Employee e
+        WHERE (e.status = 'ACTIVE' OR e.status = 'ON_LEAVE')
+          AND e.hireDate BETWEEN :startDate AND :endDate
+    """)
+    long countWorkingBetweenDates(@Param("startDate") LocalDate fromDate, @Param("endDate") LocalDate toDate);
 }

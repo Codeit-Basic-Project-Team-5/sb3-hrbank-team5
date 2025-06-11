@@ -164,27 +164,6 @@ public class BasicChangeLogService implements ChangeLogService {
             .toList();
     }
 
-    @Override
-    @Transactional(readOnly = true)
-    public Long countChangeLogs(Instant fromDate, Instant toDate) {
-        Instant now = Instant.now();
-        Instant from;
-        if (fromDate != null) {
-            from = fromDate;
-        } else {
-            from = now.minus(7, ChronoUnit.DAYS);
-        }
-
-        Instant to;
-        if (toDate != null) {
-            to = toDate;
-        } else {
-            to = now;
-        }
-        return changeLogRepository.countByUpdatedAtBetween(from, to);
-    }
-
-
     //IP주소 받는 메서드
     private String getIpAddress(HttpServletRequest request) {
         String ipAddress = request.getHeader("X-Forwarded=For");
