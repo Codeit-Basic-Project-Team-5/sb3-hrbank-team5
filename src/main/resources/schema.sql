@@ -59,7 +59,7 @@ CREATE TABLE IF NOT EXISTS change_logs
 (
     id          BIGSERIAL PRIMARY KEY,
     type        VARCHAR(20) NOT NULL,
-    employee_id BIGSERIAL   NOT NULL
+    employee_id BIGINT      NOT NULL
         REFERENCES employees (id)
             ON DELETE RESTRICT,
     ip_address  VARCHAR(50),
