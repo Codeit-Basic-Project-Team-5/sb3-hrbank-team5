@@ -1,14 +1,22 @@
 package com.ohgiraffers.hrbank.controller;
 
 import com.ohgiraffers.hrbank.dto.data.EmployeeDistributionDto;
+import com.ohgiraffers.hrbank.dto.data.EmployeeDto;
 import com.ohgiraffers.hrbank.dto.data.EmployeeTrendDto;
 import com.ohgiraffers.hrbank.entity.EmployeeStatus;
 import com.ohgiraffers.hrbank.service.DashBoardService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.media.ArraySchema;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import java.time.LocalDate;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.ErrorResponse;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -22,6 +30,21 @@ public class DashBoardController {
 
     private final DashBoardService dashBoardService;
 
+    @Operation(summary = "직원 수 조회")
+    @ApiResponses({
+        @ApiResponse(
+            responseCode = "200", description = "조회 성공",
+            content = @Content(schema = @Schema(type = "integer", format = "int64"))
+        ),
+        @ApiResponse(
+            responseCode = "400", description = "잘못된 요청",
+            content = @Content(schema = @Schema(implementation = ErrorResponse.class))
+        ),
+        @ApiResponse(
+            responseCode = "500", description = "서버 오류",
+            content = @Content(schema = @Schema(implementation = ErrorResponse.class))
+        )
+    })
     @GetMapping("/employees/count")
     public ResponseEntity<Long> getCount(
         @RequestParam(required = false) EmployeeStatus status,
@@ -42,6 +65,24 @@ public class DashBoardController {
         return ResponseEntity.ok(count);
     }
 
+    @Operation(summary = "직원 분포 조회")
+    @ApiResponses({
+        @ApiResponse(
+            responseCode = "200", description = "조회 성공",
+            content = @Content(
+                mediaType = "application/json",
+                array = @ArraySchema(schema = @Schema(implementation = EmployeeDistributionDto.class))
+            )
+        ),
+        @ApiResponse(
+            responseCode = "400", description = "잘못된 요청 또는 지원하지 않는 그룹화 기준",
+            content = @Content(schema = @Schema(implementation = ErrorResponse.class))
+        ),
+        @ApiResponse(
+            responseCode = "500", description = "서버 오류",
+            content = @Content(schema = @Schema(implementation = ErrorResponse.class))
+        )
+    })
     @GetMapping("/employees/stats/distribution")
     public ResponseEntity<List<EmployeeDistributionDto>> getDistribution(
         @RequestParam(defaultValue = "department") String groupBy,
@@ -51,6 +92,24 @@ public class DashBoardController {
         return ResponseEntity.ok(responses);
     }
 
+    @Operation(summary = "직원 수 추이 조회")
+    @ApiResponses({
+        @ApiResponse(
+            responseCode = "200", description = "조회 성공",
+            content = @Content(
+                mediaType = "application/json",
+                array = @ArraySchema(schema = @Schema(implementation = EmployeeTrendDto.class))
+            )
+        ),
+        @ApiResponse(
+            responseCode = "400", description = "잘못된 요청 또는 지원하지 않는 시간 단위",
+            content = @Content(schema = @Schema(implementation = ErrorResponse.class))
+        ),
+        @ApiResponse(
+            responseCode = "500", description = "서버 오류",
+            content = @Content(schema = @Schema(implementation = ErrorResponse.class))
+        )
+    })
     @GetMapping("/employees/stats/trend")
     public ResponseEntity<List<EmployeeTrendDto>> getTrend(
         @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
@@ -61,6 +120,21 @@ public class DashBoardController {
         return ResponseEntity.ok(dtos);
     }
 
+    @Operation(summary = "수정 이력 건수 조회")
+    @ApiResponses({
+        @ApiResponse(
+            responseCode = "200", description = "조회 성공",
+            content = @Content(schema = @Schema(type = "integer", format = "int64"))
+        ),
+        @ApiResponse(
+            responseCode = "400", description = "잘못된 요청 또는 유효하지 않은 날짜 범위",
+            content = @Content(schema = @Schema(implementation = ErrorResponse.class))
+        ),
+        @ApiResponse(
+            responseCode = "500", description = "서버 오류",
+            content = @Content(schema = @Schema(implementation = ErrorResponse.class))
+        )
+    })
     @GetMapping("/change-logs/count")
     public ResponseEntity<Long> getCount(
         @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDate fromDate,
