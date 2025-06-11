@@ -18,7 +18,6 @@ import com.ohgiraffers.hrbank.repository.EmployeeRepository;
 import com.ohgiraffers.hrbank.repository.FileRepository;
 import com.ohgiraffers.hrbank.storage.FileStorage;
 import com.ohgiraffers.hrbank.service.BackupService;
-import com.ohgiraffers.hrbank.storage.FileStorage;
 import jakarta.servlet.http.HttpServletRequest;
 import java.io.BufferedWriter;
 import java.io.IOException;
@@ -28,6 +27,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.Instant;
+import java.time.format.DateTimeFormatter;
 import java.util.Comparator;
 import java.util.List;
 import java.util.NoSuchElementException;
@@ -165,86 +165,16 @@ public class BasicBackupService implements BackupService {
 
         // STEP 전 준비(worker ip 구하기, startedAt 설정)
         String worker = getIpAddress(request);
-        Instant now = Instant.now();
+        Instant startedAt = Instant.now();
 
         // STEP 1: 시작전 데이터 생성및 저장
-        Backup backup = new Backup(worker, now,null, StatusType.IN_PROGRESS);
+        Backup backup = new Backup(worker, startedAt,null, StatusType.IN_PROGRESS);
         backup = backupRepository.save(backup);
 
         // STEP 2: 데이터 백업 필요 여부 확인
         if(isBackupRequired()){
             // STEP 3: 백업 작업 (OOM 방지를 위한 스트리밍 방식)
-            String name = "employee_backup_temp_name";
-            String type = "employee_backup_temp_type";
-            Long filesize = (long) 0;
-            File file= new File(name,type,filesize); // CSV 파일 생성
-            file = fileRepository.save(file);
-            try {
-                // 스트리밍 방식으로 직원 데이터 백업
-                try (OutputStream os = fileStorage.put(file.getId(), ".csv");
-                    BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(os))) {
-
-                    writer.write("ID,직원번호,이름,이메일,부서,직급,입사일,상태\n");
-
-                    int page = 0;
-                    int size = 100;
-                    Page<Employee> employeePage;
-
-                    do {
-                        employeePage = employeeRepository.findAll(PageRequest.of(page, size));
-                        for (Employee emp : employeePage.getContent()) {
-                            writer.write(String.format("%d,%s,%s,%s,%s,%s,%s,%s\n",
-                                emp.getId(), emp.getEmployeeNumber(),emp.getName(), emp.getEmail(),emp.getDepartment().getName(), emp.getPosition(),emp.getHireDate(),emp.getStatus()));
-                        }
-                        page++;
-                    } while (!employeePage.isLast());
-                }
-
-                // STEP 4-1: 성공 처리
-                name = "employee_backup_"+file.getId()+"_"+now.atZone(TimeZone.getDefault().toZoneId());
-                type = "text/csv";
-                Path filePath = Paths.get(root + file.getId() + ".csv");
-                filesize = Files.size(filePath);
-                file.update(name,type,filesize);
-                file = fileRepository.save(file);
-
-
-                backup.update(Instant.now(), StatusType.COMPLETED, file);
-                backup = backupRepository.save(backup);
-                return backupMapper.toDto(backup);
-
-            } catch (Exception e) {
-                // STEP 4-2: 실패 처리
-                if (file != null) {
-                    fileRepository.delete(file);
-                }
-                // 에러 로그 파일 저장
-                File logFile = new File("backup_failed_log_temp", "text/plain", 0L);
-                logFile = fileRepository.save(logFile);
-
-                try (OutputStream logOs = fileStorage.put(logFile.getId(), ".log");
-                    BufferedWriter logWriter = new BufferedWriter(new OutputStreamWriter(logOs))) {
-                    logWriter.write("백업 실패 사유:\n");
-                    logWriter.write(e.getMessage());
-                } catch (IOException ioException) {
-                    throw new RuntimeException(ioException);
-                }
-
-                name = "backup_failed_log_"+logFile.getId()+"_"+now.atZone(TimeZone.getDefault().toZoneId());
-                type = "text/plain";
-                Path filePath = Paths.get(root + logFile.getId() + ".csv");
-                try {
-                    filesize = Files.size(filePath);
-                } catch (IOException ex) {
-                    throw new RuntimeException(ex);
-                }
-                logFile.update(name,type,filesize);
-                logFile = fileRepository.save(logFile);
-
-                backup.update(Instant.now(), StatusType.FAILED, logFile);
-                backup = backupRepository.save(backup);
-                return backupMapper.toDto(backup);
-            }
+            return executeBackup(startedAt, backup);
 
         }
         else{
@@ -303,16 +233,20 @@ public class BasicBackupService implements BackupService {
     }
 
     @Override
-    @Scheduled(cron = "0 0 * * * *")
+    @Scheduled(cron = "${backup.scheduler.cron}")
     @Transactional
-    public BackupDto executeBackup() {
+    public BackupDto scheduledBackup() {
         String worker = "system";
         Instant startedAt = Instant.now();
 
-        // 1. 백업 히스토리 생성
+        //백업 히스토리 생성
         Backup backup = new Backup(worker, startedAt,null, StatusType.IN_PROGRESS);
         backup = backupRepository.save(backup);
 
+        return executeBackup(startedAt, backup);
+    }
+
+    private BackupDto executeBackup(Instant startedAt, Backup backup) {
         String name = "employee_backup_temp_name";
         String type = "employee_backup_temp_type";
         Long filesize = (long) 0;
@@ -340,9 +274,10 @@ public class BasicBackupService implements BackupService {
             }
 
             // STEP 4-1: 성공 처리
-            name = "employee_backup_"+file.getId()+"_"+startedAt.atZone(TimeZone.getDefault().toZoneId());
+            name = "employee_backup_"+file.getId()+"_"+startedAt.atZone(TimeZone.getDefault().toZoneId()) .format(
+                DateTimeFormatter.ofPattern("yyyy-MM-dd_HH:mm:ss"));
             type = "text/csv";
-            Path filePath = Paths.get(root + file.getId() + ".csv");
+            Path filePath = Paths.get(root +"/"+ file.getId() + ".csv");
             filesize = Files.size(filePath);
             file.update(name,type,filesize);
             file = fileRepository.save(file);
@@ -369,9 +304,10 @@ public class BasicBackupService implements BackupService {
                 throw new RuntimeException(ioException);
             }
 
-            name = "backup_failed_log_"+logFile.getId()+"_"+startedAt.atZone(TimeZone.getDefault().toZoneId());
+            name = "backup_failed_log_"+logFile.getId()+"_"+startedAt.atZone(TimeZone.getDefault().toZoneId()).format(
+                DateTimeFormatter.ofPattern("yyyy-MM-dd_HH:mm:ss"));
             type = "text/plain";
-            Path filePath = Paths.get(root + logFile.getId() + ".csv");
+            Path filePath = Paths.get(root +"/"+ logFile.getId() + ".log");
             try {
                 filesize = Files.size(filePath);
             } catch (IOException ex) {
@@ -384,7 +320,5 @@ public class BasicBackupService implements BackupService {
             backup = backupRepository.save(backup);
             return backupMapper.toDto(backup);
         }
-
-
     }
 }
