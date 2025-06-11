@@ -131,6 +131,8 @@ public class BasicEmployeeService implements EmployeeService {
         String newMemo = employeeUpdateRequest.memo();
 
         employee.update(newName, newEmail, newDepartment, newPosition, newHireDate, newStatus, nullableProfile);
+        employeeRepository.save(employee);
+
         return employeeMapper.toDto(employee);
     }
 
