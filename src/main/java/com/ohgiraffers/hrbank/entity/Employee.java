@@ -96,4 +96,8 @@ public class Employee {
             this.profileImage = newProfileImage;
         }
     }
+
+    public void setEmployeeNumber(String employeeNumber) {
+        this.employeeNumber = employeeNumber;
+    }
 }

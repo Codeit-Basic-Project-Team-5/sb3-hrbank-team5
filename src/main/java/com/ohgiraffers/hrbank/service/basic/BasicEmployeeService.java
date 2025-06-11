@@ -87,15 +87,21 @@ public class BasicEmployeeService implements EmployeeService {
         Employee employee = new Employee(
             employeeCreateRequest.name(),
             employeeCreateRequest.email(),
-            generateEmployeeNumber(),   // 사원번호 자동 생성
+            "TEMP",   // 임시 사원번호
             department,
             employeeCreateRequest.position(),
             employeeCreateRequest.hireDate(),
             nullableProfile
         );
-       employeeRepository.save(employee);
 
-        return employeeMapper.toDto(employee);
+        Employee savedEmployee = employeeRepository.save(employee);
+
+        String actualEmployeeNumber = generateEmployeeNumber(savedEmployee.getId());
+        savedEmployee.setEmployeeNumber(actualEmployeeNumber);
+
+        Employee finalEmployee = employeeRepository.save(savedEmployee);
+
+        return employeeMapper.toDto(finalEmployee);
     }
 
     @Override
@@ -384,15 +390,9 @@ public class BasicEmployeeService implements EmployeeService {
     /**
      * 사원번호 자동 생성 (예: EMP-2025-001)
      */
-    private String generateEmployeeNumber() {
-        // 현재 연도 기준으로 생성
+    private String generateEmployeeNumber(Long employeeId) {
         int year = LocalDate.now().getYear();
-
-        // 해당 연도의 기존 직원 수 + 1
-        long count = employeeRepository.count();
-        String sequence = String.format("%03d", count + 1);
-
-        return String.format("EMP-%d-%s", year, sequence);
+        return String.format("EMP-%d-%d", year, employeeId);
     }
 
     /**
