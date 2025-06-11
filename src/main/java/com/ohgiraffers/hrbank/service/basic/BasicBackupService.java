@@ -127,8 +127,10 @@ public class BasicBackupService implements BackupService {
         // 6. totalElements 찾기
         Long totalElements = backupRepository.count();
 
-        // 7. 마지막 행 제거
-        content.remove(content.size() - 1);
+        // 7. 마지막 페이지가 아닐경우 해당 페이지의 마지막 행 제거
+        if (hasNext) {
+            content.remove(content.size() - 1);
+        }
 
         return new CursorPageResponseBackupDto(content,nextCursor,nextIdAfter,size,totalElements,hasNext);
     }
