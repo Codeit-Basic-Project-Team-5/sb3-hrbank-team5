@@ -43,7 +43,7 @@ public class BasicChangeLogService implements ChangeLogService {
         String ipAddress = getIpAddress(request);
 
         ChangeLog changeLog = changeLogMapper.toEntity(dto);
-        changeLog.setEmployeeId(emp.getEmployeeNumber());
+        changeLog.setEmployeeId(emp.getId());
         changeLog.setIpAddress(ipAddress);
 
         List<ChangeLogDiff> diffEntities = changeLogMapper.toDiffEntityList(changeLog, dto.diffs());
