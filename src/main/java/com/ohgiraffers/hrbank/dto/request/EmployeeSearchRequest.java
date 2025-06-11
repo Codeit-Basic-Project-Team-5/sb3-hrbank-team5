@@ -52,11 +52,4 @@ public record EmployeeSearchRequest(
             sortDirection = "asc";
         }
     }
-
-    /**
-     * 정렬 방향이 내림차순인지 확인
-     */
-    public boolean isDescending() {
-        return "desc".equalsIgnoreCase(sortDirection);
-    }
 }

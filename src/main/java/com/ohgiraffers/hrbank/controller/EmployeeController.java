@@ -114,7 +114,7 @@ public class EmployeeController {
         @RequestParam(required = false) EmployeeStatus status,
 
         // 정렬 조건
-        @RequestParam(value = "sortField", defaultValue = "name") String sortField,
+        @RequestParam(defaultValue = "name") String sortField,
         @RequestParam(defaultValue = "asc") String sortDirection,
 
         // 페이지네이션
@@ -144,81 +144,81 @@ public class EmployeeController {
         return ResponseEntity.ok(response);
     }
 
-    /**
-     * 커서 기반 다음 페이지 조회 (간편 메서드)
-     *
-     * GET /api/employees/next?cursor=eyJpZCI6MTAsInNvcnRCeSI6Im5hbWUiLCJzb3J0VmFsdWUiOiLquYTsnbTrhIHrvrgg7IKs7JuQ7IaA7JaR7JiwIn0%3D
-     */
-    @GetMapping("/next")
-    public ResponseEntity<CursorPageResponseEmployeeDto> findNextEmployees(
-        @RequestParam String cursor,
-        @RequestParam(defaultValue = "30") Integer size,
-
-        // 기존 검색 조건들은 유지 (커서에 포함되지 않으므로 다시 전달 필요)
-        @RequestParam(required = false) String nameOrEmail,
-        @RequestParam(required = false) String departmentName,
-        @RequestParam(required = false) String position,
-        @RequestParam(required = false) String employeeNumber,
-        @RequestParam(required = false)
-        @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate hireDateFrom,
-        @RequestParam(required = false)
-        @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate hireDateTo,
-        @RequestParam(required = false) EmployeeStatus status
-    ) {
-        // 커서 디코딩을 통해 idAfter와 정렬 정보 추출
-        CursorInfo cursorInfo = decodeCursor(cursor);
-
-        // 검색 요청 생성
-        EmployeeSearchRequest searchRequest = new EmployeeSearchRequest(
-            nameOrEmail,
-            departmentName,
-            position,
-            employeeNumber,
-            hireDateFrom,
-            hireDateTo,
-            status,
-            cursorInfo.sortField(),
-            cursorInfo.sortDirection(),
-            cursorInfo.idAfter(),
-            cursor,
-            size
-        );
-
-        CursorPageResponseEmployeeDto response = employeeService.findEmployees(searchRequest);
-        return ResponseEntity.ok(response);
-    }
+//    /**
+//     * 커서 기반 다음 페이지 조회 (간편 메서드)
+//     *
+//     * GET /api/employees/next?cursor=eyJpZCI6MTAsInNvcnRCeSI6Im5hbWUiLCJzb3J0VmFsdWUiOiLquYTsnbTrhIHrvrgg7IKs7JuQ7IaA7JaR7JiwIn0%3D
+//     */
+//    @GetMapping("/next")
+//    public ResponseEntity<CursorPageResponseEmployeeDto> findNextEmployees(
+//        @RequestParam String cursor,
+//        @RequestParam(defaultValue = "30") Integer size,
+//
+//        // 기존 검색 조건들은 유지 (커서에 포함되지 않으므로 다시 전달 필요)
+//        @RequestParam(required = false) String nameOrEmail,
+//        @RequestParam(required = false) String departmentName,
+//        @RequestParam(required = false) String position,
+//        @RequestParam(required = false) String employeeNumber,
+//        @RequestParam(required = false)
+//        @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate hireDateFrom,
+//        @RequestParam(required = false)
+//        @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate hireDateTo,
+//        @RequestParam(required = false) EmployeeStatus status
+//    ) {
+//        // 커서 디코딩을 통해 idAfter와 정렬 정보 추출
+//        CursorInfo cursorInfo = decodeCursor(cursor);
+//
+//        // 검색 요청 생성
+//        EmployeeSearchRequest searchRequest = new EmployeeSearchRequest(
+//            nameOrEmail,
+//            departmentName,
+//            position,
+//            employeeNumber,
+//            hireDateFrom,
+//            hireDateTo,
+//            status,
+//            cursorInfo.sortField(),
+//            cursorInfo.sortDirection(),
+//            cursorInfo.idAfter(),
+//            cursor,
+//            size
+//        );
+//
+//        CursorPageResponseEmployeeDto response = employeeService.findEmployees(searchRequest);
+//        return ResponseEntity.ok(response);
+//    }
 
     /**
      * 커서 디코딩 헬퍼 메서드
      */
-    private CursorInfo decodeCursor(String cursor) {
-        try {
-            // Base64 디코딩
-            byte[] decodedBytes = java.util.Base64.getDecoder().decode(cursor);
-            String decodedJson = new String(decodedBytes, java.nio.charset.StandardCharsets.UTF_8);
-
-            // JSON 파싱
-            com.fasterxml.jackson.databind.ObjectMapper objectMapper =
-                new com.fasterxml.jackson.databind.ObjectMapper();
-            objectMapper.registerModule(new com.fasterxml.jackson.datatype.jsr310.JavaTimeModule());
-
-            @SuppressWarnings("unchecked")
-            java.util.Map<String, Object> cursorMap = objectMapper.readValue(decodedJson, java.util.Map.class);
-
-            Long idAfter = Long.valueOf(cursorMap.get("id").toString());
-            String sortField = cursorMap.get("sortField").toString();
-
-            return new CursorInfo(idAfter, sortField, "asc"); // 기본값으로 asc 설정
-
-        } catch (Exception e) {
-            throw new IllegalArgumentException("잘못된 커서 형식입니다: " + cursor, e);
-        }
-    }
+//    private CursorInfo decodeCursor(String cursor) {
+//        try {
+//            // Base64 디코딩
+//            byte[] decodedBytes = java.util.Base64.getDecoder().decode(cursor);
+//            String decodedJson = new String(decodedBytes, java.nio.charset.StandardCharsets.UTF_8);
+//
+//            // JSON 파싱
+//            com.fasterxml.jackson.databind.ObjectMapper objectMapper =
+//                new com.fasterxml.jackson.databind.ObjectMapper();
+//            objectMapper.registerModule(new com.fasterxml.jackson.datatype.jsr310.JavaTimeModule());
+//
+//            @SuppressWarnings("unchecked")
+//            java.util.Map<String, Object> cursorMap = objectMapper.readValue(decodedJson, java.util.Map.class);
+//
+//            Long idAfter = Long.valueOf(cursorMap.get("id").toString());
+//            String sortField = cursorMap.get("sortField").toString();
+//
+//            return new CursorInfo(idAfter, sortField, "asc"); // 기본값으로 asc 설정
+//
+//        } catch (Exception e) {
+//            throw new IllegalArgumentException("잘못된 커서 형식입니다: " + cursor, e);
+//        }
+//    }
 
     /**
      * 커서 정보를 담는 내부 클래스
      */
-    private record CursorInfo(Long idAfter, String sortField, String sortDirection) {}
+//    private record CursorInfo(Long idAfter, String sortField, String sortDirection) {}
 
     private Optional<FileCreateRequest> resolveProfileRequest(MultipartFile profileFile) {
         if (profileFile.isEmpty()) {
