@@ -28,7 +28,17 @@ public class DashBoardController {
         @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDate fromDate,
         @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDate toDate
     ) {
-        long count = dashBoardService.getCount(status, fromDate, toDate);
+        long count;
+        if (status == null && fromDate == null && toDate == null) {
+            count = dashBoardService.countAllEmployees();
+        } else if (status != null && fromDate == null && toDate == null) {
+            count = dashBoardService.countByStatus(status);
+        } else if (status != null && fromDate != null && toDate != null) {
+            count = dashBoardService.countHiredBetween(status, fromDate, toDate);
+        } else {
+            throw new IllegalArgumentException("올바른 파라미터 조합이 아닙니다.");
+        }
+
         return ResponseEntity.ok(count);
     }
 
@@ -56,7 +66,7 @@ public class DashBoardController {
         @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDate fromDate,
         @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDate toDate
     ) {
-        long count = dashBoardService.getCount(null, fromDate, toDate);
+        long count = dashBoardService.countUpdatesBetween(fromDate, toDate);
         return ResponseEntity.ok(count);
     }
 }
