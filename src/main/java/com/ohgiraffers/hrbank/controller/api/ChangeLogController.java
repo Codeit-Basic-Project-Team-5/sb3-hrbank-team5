@@ -44,14 +44,14 @@ public class ChangeLogController {
         @RequestParam(defaultValue = "30") int size,
         // Swagger 기본값: at
         @RequestParam(defaultValue = "at") String sortField,
-        @RequestParam(defaultValue = "DESC") String sortDir
+        @RequestParam(defaultValue = "desc") String sortDirection
     ) {
-        // at → updatedAt 로 치환
-        if ("at".equalsIgnoreCase(sortField)) {
+        // swagger 명세에선 "at" 이지만, 내부 엔티티 필드는 updatedAt 이므로 매핑
+        if ("at".equals(sortField)) {
             sortField = "updatedAt";
         }
         return ResponseEntity.ok(
-            service.searchWithCursor(cursor, size, sortField, sortDir)
+            service.searchWithCursor(cursor, size, sortField, sortDirection)
         );
     }
 
@@ -64,5 +64,4 @@ public class ChangeLogController {
     public ResponseEntity<List<ChangeLogDiffResponse>> diffs(@PathVariable Long id) {
         return ResponseEntity.ok(service.getDiffsByChangeLogId(id));
     }
-
 }
