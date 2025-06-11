@@ -1,9 +1,7 @@
 package com.ohgiraffers.hrbank.service.basic;
 
-import com.ohgiraffers.hrbank.dto.data.BackupDto;
 import com.ohgiraffers.hrbank.dto.data.EmployeeDistributionDto;
 import com.ohgiraffers.hrbank.dto.data.EmployeeTrendDto;
-import com.ohgiraffers.hrbank.entity.Backup;
 import com.ohgiraffers.hrbank.entity.EmployeeStatus;
 import com.ohgiraffers.hrbank.mapper.BackupMapper;
 import com.ohgiraffers.hrbank.repository.BackupRepository;
@@ -17,7 +15,6 @@ import java.time.ZoneId;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.NoSuchElementException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -70,13 +67,6 @@ public class BasicDashBoardService implements DashBoardService {
                 return new EmployeeDistributionDto(groupKey, count, percentage);
             })
             .toList();
-    }
-
-    public BackupDto getLatestBackup(String status) {
-        Backup backup = backupRepository.findLatestBackupByStatus(status)
-            .orElseThrow(() -> new NoSuchElementException("해당 상태의 백업이 존재하지 않습니다. (status: " + status + ")"));
-
-        return backupMapper.toDto(backup);
     }
 
     public List<EmployeeTrendDto> getTrend(LocalDate from, LocalDate to, String unit) {

@@ -59,12 +59,4 @@ public class DashBoardController {
         long count = dashBoardService.getCount(null, fromDate, toDate);
         return ResponseEntity.ok(count);
     }
-
-//    @GetMapping("/backups/latest")
-//    public ResponseEntity<BackupDto> getLatestBackup(@RequestParam(defaultValue = "COMPLETED") String status) {
-//        BackupDto backupDto = dashBoardService.getLatestBackup(status);
-//        return ResponseEntity
-//            .status(HttpStatus.CREATED)
-//            .body(backupDto);
-//    }
 }
