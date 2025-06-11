@@ -16,8 +16,8 @@ import com.ohgiraffers.hrbank.repository.BackupRepository;
 import com.ohgiraffers.hrbank.repository.ChangeLogRepository;
 import com.ohgiraffers.hrbank.repository.EmployeeRepository;
 import com.ohgiraffers.hrbank.repository.FileRepository;
-import com.ohgiraffers.hrbank.storage.FileStorage;
 import com.ohgiraffers.hrbank.service.BackupService;
+import com.ohgiraffers.hrbank.storage.FileStorage;
 import jakarta.servlet.http.HttpServletRequest;
 import java.io.BufferedWriter;
 import java.io.IOException;
@@ -28,11 +28,11 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.Instant;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.TimeZone;
-import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
@@ -78,7 +78,7 @@ public class BasicBackupService implements BackupService {
         if (backupCursorPageRequest.worker() != null && !backupCursorPageRequest.worker().isBlank()) {
             worker = "%" + backupCursorPageRequest.worker() + "%";
         }
-        List<BackupDto> content;
+        Page<BackupDto> content;
         if(backupCursorPageRequest.cursor()==null){
             content = backupRepository.findAllWithoutCursor(
                     worker,
@@ -86,9 +86,8 @@ public class BasicBackupService implements BackupService {
                     backupCursorPageRequest.startedAtFrom(),
                     backupCursorPageRequest.startedAtTo(),
                     pageable
-                ).stream()
-                .map(backupMapper::toDto)
-                .collect(Collectors.toList());
+                )
+                .map(backupMapper::toDto);
         }
         else{
             content = backupRepository.findAllWithCursor(
@@ -99,12 +98,12 @@ public class BasicBackupService implements BackupService {
                     Instant.parse(backupCursorPageRequest.cursor()),
                     backupCursorPageRequest.idAfter(),
                     pageable
-                ).stream()
-                .map(backupMapper::toDto)
-                .collect(Collectors.toList());
+                )
+                .map(backupMapper::toDto);
+
         }
 
-        boolean hasNext = content.size() > backupCursorPageRequest.size();
+        boolean hasNext = content.getContent().size() > backupCursorPageRequest.size();
 
         //3. nextCursor 찾기
         String nextCursor = content
@@ -112,6 +111,7 @@ public class BasicBackupService implements BackupService {
             .reduce((first, second) -> second)
             .map(BackupDto::startedAt)
             .map(Instant::toString)
+            .map(cursor -> hasNext ? cursor : null)
             .orElse(null);
 
         // 4. 현재 페이지의 마지막 요소 ID 찾기
@@ -119,20 +119,28 @@ public class BasicBackupService implements BackupService {
             .stream()
             .reduce((first, second) -> second)
             .map(BackupDto::id)
+            .map(nextId -> hasNext ? nextId : null)
             .orElse(null);
 
         // 5. size 찾기
-        int size = content.size()-1;
-
-        // 6. totalElements 찾기
-        Long totalElements = backupRepository.count();
-
-        // 7. 마지막 페이지가 아닐경우 해당 페이지의 마지막 행 제거
+        int size;
         if (hasNext) {
-            content.remove(content.size() - 1);
+            size = content.getContent().size() - 1;
+        }
+        else{
+            size = content.getContent().size();
         }
 
-        return new CursorPageResponseBackupDto(content,nextCursor,nextIdAfter,size,totalElements,hasNext);
+        // 6. totalElements 찾기
+        Long totalElements = content.getTotalElements();
+
+        // 7. 마지막 페이지가 아닐경우 해당 페이지의 마지막 행 제거
+        List<BackupDto> contentToList = new ArrayList<>(content.getContent());
+        if (hasNext && !contentToList.isEmpty()) {
+            contentToList.remove(contentToList.size() - 1);  // 마지막 요소 제거
+        }
+
+        return new CursorPageResponseBackupDto(contentToList,nextCursor,nextIdAfter,size,totalElements,hasNext);
     }
 
     /**
