@@ -12,7 +12,18 @@ public interface ChangeLogService {
 
     Long registerChangeLog(ChangeLogRequest dto, HttpServletRequest request);
 
-    ChangeLogCursorResponse searchWithCursor(Instant cursor, int size, String sortField, String sortDir);
+    ChangeLogCursorResponse searchWithCursor(
+        Instant cursor,
+        int size,
+        String sortField,
+        String sortDirection,
+        String employeeNumber,
+        String memo,
+        String ipAddress,
+        String type,
+        Instant from,
+        Instant to
+    );
 
     ChangeLogDetailResponse getChangeLogDetail(Long id);
 

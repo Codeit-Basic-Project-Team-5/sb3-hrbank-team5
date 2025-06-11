@@ -55,8 +55,19 @@ public class BasicChangeLogService implements ChangeLogService {
 
     @Override
     @Transactional(readOnly = true)
-    public ChangeLogCursorResponse searchWithCursor(Instant cursor, int size, String sortField,
-        String sortDir) {
+    public ChangeLogCursorResponse searchWithCursor(
+        Instant cursor,
+        int size,
+        String sortField,
+        String sortDirection,
+        String employeeNumber,
+        String memo,
+        String ipAddress,
+        String type,
+        Instant atFrom,
+        Instant atTo
+    ) {
+
         Instant effectiveCursor;
         if (cursor != null) {
             effectiveCursor = cursor;
@@ -64,14 +75,77 @@ public class BasicChangeLogService implements ChangeLogService {
             effectiveCursor = Instant.now().plus(1, ChronoUnit.DAYS);
         }
 
-        Sort.Direction direction = Sort.Direction.fromString(sortDir);
+        if ("at".equals(sortField)) {
+            sortField = "updatedAt";
+        }
+
+        Sort.Direction direction = Sort.Direction.fromString(sortDirection);
         Sort sortOption = Sort.by(new Sort.Order(direction, sortField))
             .and(Sort.by(direction, "id"));
 
         Pageable page = PageRequest.of(0, size + 1, sortOption);
-        List<ChangeLogListResponse> fetched = changeLogRepository
-            .searchWithCursor(effectiveCursor, page)
-            .stream()
+        String empP;
+        if (nonBlank(employeeNumber)) {
+            empP = "%" + employeeNumber + "%";
+        } else {
+            empP = null;
+        }
+
+        String memoP;
+        if (nonBlank(memo)) {
+            memoP = "%" + memo + "%";
+        } else {
+            memoP = null;
+        }
+
+        String ipP;
+        if (nonBlank(ipAddress)) {
+            ipP = "%" + ipAddress + "%";
+        } else {
+            ipP = null;
+        }
+
+        List<ChangeLog> logs;
+        if (atFrom != null && atTo != null) {
+            logs = changeLogRepository.findAllByFilterWithDate(
+                effectiveCursor, empP, memoP, ipP, type, atFrom, atTo, page
+            );
+        } else if (atFrom != null) {
+            logs = changeLogRepository.findAllByFilterFromOnly(
+                effectiveCursor, empP, memoP, ipP, type, atFrom, page
+            );
+        } else if (atTo != null) {
+            logs = changeLogRepository.findAllByFilterToOnly(
+                effectiveCursor, empP, memoP, ipP, type, atTo, page
+            );
+        } else {
+            logs = changeLogRepository.findAllByFilterNoDate(
+                effectiveCursor, empP, memoP, ipP, type, page
+            );
+        }
+
+        long total;
+        if (atFrom != null && atTo != null) {
+            total = changeLogRepository.countByFilterWithDate(
+                effectiveCursor, empP, memoP, ipP, type, atFrom, atTo
+            );
+        } else if (atFrom != null) {
+            total = changeLogRepository.countByFilterFromOnly(
+                effectiveCursor, empP, memoP, ipP, type, atFrom
+            );
+        } else if (atTo != null) {
+            total = changeLogRepository.countByFilterToOnly(
+                effectiveCursor, empP, memoP, ipP, type, atTo
+            );
+        } else {
+            total = changeLogRepository.countByFilterNoDate(
+                effectiveCursor, empP, memoP, ipP, type
+            );
+        }
+
+        boolean hasNext = logs.size() > size;
+        List<ChangeLogListResponse> pageContent = logs.stream()
+            .limit(size)
             .map(log -> new ChangeLogListResponse(
                 log.getId(),
                 log.getType(),
@@ -81,20 +155,6 @@ public class BasicChangeLogService implements ChangeLogService {
                 log.getUpdatedAt()      // → at
             ))
             .toList();
-
-        boolean hasNext;
-        if (fetched.size() > size) {
-            hasNext = true;
-        } else {
-            hasNext = false;
-        }
-
-        List<ChangeLogListResponse> pageContent;
-        if (hasNext) {
-            pageContent = fetched.subList(0, size);
-        } else {
-            pageContent = fetched;
-        }
 
         Instant nextCursor;
         if (hasNext) {
@@ -109,9 +169,6 @@ public class BasicChangeLogService implements ChangeLogService {
         } else {
             nextIdAfter = null;
         }
-
-        long total = changeLogRepository.count();
-
         return new ChangeLogCursorResponse(
             pageContent,
             nextCursor,
@@ -137,7 +194,6 @@ public class BasicChangeLogService implements ChangeLogService {
                 diff.getNewValue()
             ))
             .toList();
-
         return new ChangeLogDetailResponse(
             log.getId(),
             log.getType(),
@@ -161,6 +217,10 @@ public class BasicChangeLogService implements ChangeLogService {
                 diff.getNewValue()
             ))
             .toList();
+    }
+
+    private boolean nonBlank(String s) {
+        return s != null && !s.isBlank();
     }
 
     //IP주소 받는 메서드
