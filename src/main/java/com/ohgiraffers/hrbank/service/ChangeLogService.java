@@ -17,6 +17,4 @@ public interface ChangeLogService {
     ChangeLogDetailResponse getChangeLogDetail(Long id);
 
     List<ChangeLogDiffResponse> getDiffsByChangeLogId(Long changeLogId);
-
-    Long countChangeLogs(Instant fromDate, Instant toDate);
 }

@@ -54,15 +54,4 @@ public class ChangeLogController {
         return ResponseEntity.ok(service.getDiffsByChangeLogId(id));
     }
 
-    @GetMapping("/count")
-    public ResponseEntity<Long> count(
-        @RequestParam(required = false)
-        @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME)
-        Instant fromDate,
-        @RequestParam(required = false)
-        @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME)
-        Instant toDate
-    ) {
-        return ResponseEntity.ok(service.countChangeLogs(fromDate, toDate));
-    }
 }
