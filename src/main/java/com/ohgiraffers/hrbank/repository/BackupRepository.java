@@ -4,7 +4,6 @@ import com.ohgiraffers.hrbank.entity.Backup;
 import com.ohgiraffers.hrbank.entity.StatusType;
 import java.time.Instant;
 import java.util.List;
-import java.util.Optional;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -16,16 +15,15 @@ public interface BackupRepository extends JpaRepository<Backup, Long> {
 
     @Query("""
         SELECT d FROM Backup d
-        WHERE (:worker IS NULL OR d.worker LIKE CONCAT('%', :worker, '%'))
+          WHERE (:worker IS NULL OR d.worker LIKE :worker)
           AND (:status IS NULL OR d.status = :status)
-          AND (:startedAtFrom IS NULL OR d.startedAt >= :startedAtFrom)
-          AND (:startedAtTo IS NULL OR d.startedAt <= :startedAtTo)
-          AND (:cursor IS NULL OR (
-              d.startedAt < :cursor
-              OR (d.startedAt = :cursor AND d.id < :idAfter)
-          ))
+          AND (CAST(:startedAtFrom AS java.time.Instant) IS NULL OR d.startedAt >= :startedAtFrom)
+          AND (CAST(:startedAtTo AS java.time.Instant) IS NULL OR d.startedAt <= :startedAtTo)
+          AND (d.startedAt < CAST(:cursor AS java.time.Instant)
+              OR (d.startedAt = CAST(:cursor AS java.time.Instant) AND d.id <= :idAfter)
+          )
     """)
-    List<Backup> findAllByCursor(
+    List<Backup> findAllWithCursor(
         @Param("worker") String worker,
         @Param("status") StatusType status,
         @Param("startedAtFrom") Instant startedAtFrom,
@@ -35,6 +33,19 @@ public interface BackupRepository extends JpaRepository<Backup, Long> {
         Pageable pageable // PageRequest.of(0, size + 1)
     );
 
-    @Query("SELECT b FROM Backup b WHERE b.status = :status ORDER BY b.endedAt DESC")
-    Optional<Backup> findLatestBackupByStatus(String status);
+
+    @Query("""
+    SELECT d FROM Backup d
+    WHERE (:worker IS NULL OR d.worker LIKE :worker)
+      AND (:status IS NULL OR d.status = :status)
+      AND (CAST(:startedAtFrom AS java.time.Instant) IS NULL OR d.startedAt >= :startedAtFrom)
+      AND (CAST(:startedAtTo AS java.time.Instant) IS NULL OR d.startedAt <= :startedAtTo)
+""")
+    List<Backup> findAllWithoutCursor(
+        @Param("worker") String worker,
+        @Param("status") StatusType status,
+        @Param("startedAtFrom") Instant startedAtFrom,
+        @Param("startedAtTo") Instant startedAtTo,
+        Pageable pageable
+    );
 }

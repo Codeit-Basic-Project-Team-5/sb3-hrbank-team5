@@ -13,7 +13,6 @@ import lombok.NoArgsConstructor;
 
 @Entity
 @Table(name = "departments")
-//, schema = "sr_bank"
 @Getter
 @NoArgsConstructor
 public class Department {
