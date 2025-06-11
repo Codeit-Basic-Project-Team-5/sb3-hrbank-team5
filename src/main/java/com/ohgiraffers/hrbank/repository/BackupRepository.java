@@ -12,7 +12,7 @@ import org.springframework.data.repository.query.Param;
 
 public interface BackupRepository extends JpaRepository<Backup, Long> {
 
-    List<Backup> findAllByWorker(String worker);
+    List<Backup> findAll();
 
     @Query("""
         SELECT d FROM Backup d

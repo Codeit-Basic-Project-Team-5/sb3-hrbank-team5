@@ -202,8 +202,9 @@ public class BasicBackupService implements BackupService {
      */
     private Boolean isBackupRequired(){
         Instant lastEndedAt = backupRepository
-            .findAllByWorker("system")
+            .findAll()
             .stream()
+            .filter(backup -> backup.getEndedAt()!=null)
             .sorted(Comparator.comparing(Backup::getEndedAt).reversed())
             .map(Backup::getEndedAt)
             .limit(1)
@@ -219,7 +220,9 @@ public class BasicBackupService implements BackupService {
             .findFirst()
             .orElse(Instant.EPOCH);
 
-        if (lastUpdatedAt.isAfter(lastEndedAt)||lastUpdatedAt.equals(lastEndedAt)) {
+        if (lastUpdatedAt.isAfter(lastEndedAt) || lastUpdatedAt.equals(lastEndedAt)) {
+            System.out.println("lastUpdatedAt = " + lastUpdatedAt);
+            System.out.println("lastEndedAt = " + lastEndedAt);
             return true;
         }
         else {
@@ -242,6 +245,10 @@ public class BasicBackupService implements BackupService {
         return request.getRemoteAddr();
     }
 
+    /**
+     * Spring Scheduler를 사용하여 배치에 따른 백업 구현
+     * @return 백업결과Dto
+     */
     @Override
     @Scheduled(cron = "${backup.scheduler.cron}")
     @Transactional
@@ -256,6 +263,12 @@ public class BasicBackupService implements BackupService {
         return executeBackup(startedAt, backup);
     }
 
+    /**
+     * 백업 수행 메서드
+     * @param startedAt 백업 시작시간
+     * @param backup 백업하려고하는 인스턴스
+     * @return 백업결과 Dto
+     */
     private BackupDto executeBackup(Instant startedAt, Backup backup) {
         String name = "employee_backup_temp_name";
         String type = "employee_backup_temp_type";
@@ -284,8 +297,8 @@ public class BasicBackupService implements BackupService {
             }
 
             // STEP 4-1: 성공 처리
-            name = "employee_backup_"+file.getId()+"_"+startedAt.atZone(TimeZone.getDefault().toZoneId()) .format(
-                DateTimeFormatter.ofPattern("yyyy-MM-dd_HH:mm:ss"));
+            name = "employee_backup_"+backup.getId()+"_"+startedAt.atZone(TimeZone.getDefault().toZoneId()) .format(
+                DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss"))+".csv";
             type = "text/csv";
             Path filePath = Paths.get(root +"/"+ file.getId() + ".csv");
             filesize = Files.size(filePath);
@@ -314,8 +327,8 @@ public class BasicBackupService implements BackupService {
                 throw new RuntimeException(ioException);
             }
 
-            name = "backup_failed_log_"+logFile.getId()+"_"+startedAt.atZone(TimeZone.getDefault().toZoneId()).format(
-                DateTimeFormatter.ofPattern("yyyy-MM-dd_HH:mm:ss"));
+            name = "backup_failed_log_"+backup.getId()+"_"+startedAt.atZone(TimeZone.getDefault().toZoneId()).format(
+                DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss"))+".log";
             type = "text/plain";
             Path filePath = Paths.get(root +"/"+ logFile.getId() + ".log");
             try {
