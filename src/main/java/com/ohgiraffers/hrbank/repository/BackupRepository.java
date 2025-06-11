@@ -87,8 +87,8 @@ public interface BackupRepository extends JpaRepository<Backup, Long> {
           AND (CAST(:startedAtTo AS java.time.Instant) IS NULL OR d.startedAt <= :startedAtTo)
           AND (d.endedAt > CAST(:cursor AS java.time.Instant)
               OR (d.endedAt = CAST(:cursor AS java.time.Instant) AND d.id >= :idAfter)
+              OR d.endedAt IS NULL
           )
-          AND d.endedAt IS NOT NULL
     """)
     Page<Backup> findAllWithCursorEndedAtAsc(
         @Param("worker") String worker,
