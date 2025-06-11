@@ -10,12 +10,12 @@ import com.ohgiraffers.hrbank.repository.DepartmentRepository;
 import com.ohgiraffers.hrbank.repository.EmployeeRepository;
 import com.ohgiraffers.hrbank.service.DepartmentService;
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
-import org.springframework.data.domain.Sort.Direction;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -86,10 +86,10 @@ public class BasicDepartmentService implements DepartmentService {
             throw new IllegalArgumentException("존재하지 않는 부서입니다.");
         }
         String name = request.name();
-        if (departmentRepository.existsByName(name)){
+        Department department = departmentRepository.findDepartmentById(id);
+        if (!department.getName().equals(name) && departmentRepository.existsByName(name)){
             throw new IllegalArgumentException("이미 존재하는 이름입니다.");
         }
-        Department department = departmentRepository.findDepartmentById(id);
 
         department.update(name,request.description(),request.establishedDate());
         Long count = employeeRepository.countByDepartmentId(id);
@@ -125,20 +125,49 @@ public class BasicDepartmentService implements DepartmentService {
         String sortDirection,
         int size) {
 
-        Pageable pageable = PageRequest.of(0 , size+1 , Sort.by(Direction.fromString(sortDirection), sortField));
+        Pageable pageable = PageRequest.of(0 , size+1 , Sort.unsorted());
 
         //검색어 없을 시 빈 문자열 처리
         String keyword = (nameOrDescription == null || nameOrDescription.isBlank()) ? "" :nameOrDescription;
 
         // JPQL 커서 쿼리 실행
-        List<Department> departments = departmentRepository.findByCursor(
-            keyword.isEmpty() ? null : keyword,
-            sortField,
-            sortDirection,
-            cursor,
-            idAfter,
-            pageable
-        );
+        List<Department> departments = new ArrayList<>();
+        if ("name".equals(sortField)) {
+            if ("asc".equalsIgnoreCase(sortDirection)) {
+                departments = departmentRepository.findByCursorNameAsc(
+                    keyword.isEmpty() ? null : keyword,
+                    cursor,
+                    idAfter,
+                    pageable
+                );
+            } else {
+                departments = departmentRepository.findByCursorNameDesc(
+                    keyword.isEmpty() ? null : keyword,
+                    cursor,
+                    idAfter,
+                    pageable
+                );
+            }
+        } else if ("establishedDate".equals(sortField)) {
+            LocalDate cursorDate = (cursor == null) ? null : LocalDate.parse(cursor);
+            if ("asc".equalsIgnoreCase(sortDirection)) {
+                departments = departmentRepository.findByCursorDateAsc(
+                    keyword.isEmpty() ? null : keyword,
+                    cursorDate,
+                    idAfter,
+                    pageable
+                );
+            } else {
+                departments = departmentRepository.findByCursorDateDesc(
+                    keyword.isEmpty() ? null : keyword,
+                    cursorDate,
+                    idAfter,
+                    pageable
+                );
+            }
+        }
+
+
         // 조건조회 객체 숫자 : totalElements 산출
         long totalElements;
         if (keyword.isEmpty()) {
