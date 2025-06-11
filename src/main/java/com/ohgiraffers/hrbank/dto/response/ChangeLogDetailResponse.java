@@ -6,9 +6,11 @@ import java.util.List;
 public record ChangeLogDetailResponse(
     Long id,
     String type,
-    String employeeId,
+    String employeeNumber,
     String memo,
     String ipAddress,
-    Instant updatedAt,
+    Instant at,
     List<ChangeLogDiffResponse> diffs
-) { }
+) {
+
+}
