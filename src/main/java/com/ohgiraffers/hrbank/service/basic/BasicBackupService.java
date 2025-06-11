@@ -39,6 +39,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
+import org.springframework.data.domain.Sort.Direction;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -64,13 +65,7 @@ public class BasicBackupService implements BackupService {
     public CursorPageResponseBackupDto findAll(BackupCursorPageRequest backupCursorPageRequest) {
 
         // 1. pageable 생성
-        Pageable pageable;
-        if(backupCursorPageRequest.sortDirection().equals("ASC")){
-            pageable = PageRequest.of(0, backupCursorPageRequest.size()+1, Sort.by(ASC, backupCursorPageRequest.sortField()));
-        }
-        else {
-            pageable = PageRequest.of(0, backupCursorPageRequest.size()+1, Sort.by(DESC, backupCursorPageRequest.sortField()));
-        }
+        Pageable pageable = PageRequest.of(0 , backupCursorPageRequest.size()+1 , Sort.by(Direction.fromString(backupCursorPageRequest.sortDirection()), backupCursorPageRequest.sortField()));
 
 
         // 2. size + 1개 조회로 hasNext 판단
@@ -79,6 +74,8 @@ public class BasicBackupService implements BackupService {
             worker = "%" + backupCursorPageRequest.worker() + "%";
         }
         Page<BackupDto> content;
+
+        //첫번째 페이지일 경우
         if(backupCursorPageRequest.cursor()==null){
             content = backupRepository.findAllWithoutCursor(
                     worker,
@@ -89,17 +86,69 @@ public class BasicBackupService implements BackupService {
                 )
                 .map(backupMapper::toDto);
         }
+        //첫번째 페이지가 아닐 경우
         else{
-            content = backupRepository.findAllWithCursor(
-                    worker,
-                    backupCursorPageRequest.status(),
-                    backupCursorPageRequest.startedAtFrom(),
-                    backupCursorPageRequest.startedAtTo(),
-                    Instant.parse(backupCursorPageRequest.cursor()),
-                    backupCursorPageRequest.idAfter(),
-                    pageable
-                )
-                .map(backupMapper::toDto);
+            // 정렬 필드가 startedAt일때
+            if(backupCursorPageRequest.sortField().equals("startedAt")){
+                //오름차순이면
+                if(backupCursorPageRequest.sortDirection().equals("ASC")){
+                    content = backupRepository.findAllWithCursorStartedAtAsc(
+                            worker,
+                            backupCursorPageRequest.status(),
+                            backupCursorPageRequest.startedAtFrom(),
+                            backupCursorPageRequest.startedAtTo(),
+                            Instant.parse(backupCursorPageRequest.cursor()),
+                            backupCursorPageRequest.idAfter(),
+                            pageable
+                        )
+                        .map(backupMapper::toDto);
+                }
+                //오름차순이 아니면
+                else{
+                    content = backupRepository.findAllWithCursorStartedAtDesc(
+                            worker,
+                            backupCursorPageRequest.status(),
+                            backupCursorPageRequest.startedAtFrom(),
+                            backupCursorPageRequest.startedAtTo(),
+                            Instant.parse(backupCursorPageRequest.cursor()),
+                            backupCursorPageRequest.idAfter(),
+                            pageable
+                        )
+                        .map(backupMapper::toDto);
+                }
+            }
+            //정렬 필드가 StartedAt이 아니면(endedAt이면)
+            else{
+                //오름차순일때
+                if(backupCursorPageRequest.sortDirection().equals("ASC")){
+                    content = backupRepository.findAllWithCursorEndedAtAsc(
+                            worker,
+                            backupCursorPageRequest.status(),
+                            backupCursorPageRequest.startedAtFrom(),
+                            backupCursorPageRequest.startedAtTo(),
+                            Instant.parse(backupCursorPageRequest.cursor()),
+                            backupCursorPageRequest.idAfter(),
+                            pageable
+                        )
+                        .map(backupMapper::toDto);
+                }
+                //내림차순일때
+                else {
+                    content = backupRepository.findAllWithCursorEndedAtDesc(
+                            worker,
+                            backupCursorPageRequest.status(),
+                            backupCursorPageRequest.startedAtFrom(),
+                            backupCursorPageRequest.startedAtTo(),
+                            Instant.parse(backupCursorPageRequest.cursor()),
+                            backupCursorPageRequest.idAfter(),
+                            pageable
+                        )
+                        .map(backupMapper::toDto);
+
+                }
+            }
+
+
 
         }
 
@@ -107,6 +156,7 @@ public class BasicBackupService implements BackupService {
 
         //3. nextCursor 찾기
         String nextCursor = content
+            .getContent()
             .stream()
             .reduce((first, second) -> second)
             .map(BackupDto::startedAt)
@@ -116,6 +166,7 @@ public class BasicBackupService implements BackupService {
 
         // 4. 현재 페이지의 마지막 요소 ID 찾기
         Long nextIdAfter = content
+            .getContent()
             .stream()
             .reduce((first, second) -> second)
             .map(BackupDto::id)
@@ -221,8 +272,6 @@ public class BasicBackupService implements BackupService {
             .orElse(Instant.EPOCH);
 
         if (lastUpdatedAt.isAfter(lastEndedAt) || lastUpdatedAt.equals(lastEndedAt)) {
-            System.out.println("lastUpdatedAt = " + lastUpdatedAt);
-            System.out.println("lastEndedAt = " + lastEndedAt);
             return true;
         }
         else {
