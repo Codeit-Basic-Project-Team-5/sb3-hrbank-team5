@@ -3,6 +3,8 @@ package com.ohgiraffers.hrbank.service.basic;
 import com.ohgiraffers.hrbank.dto.data.EmployeeDistributionDto;
 import com.ohgiraffers.hrbank.dto.data.EmployeeTrendDto;
 import com.ohgiraffers.hrbank.entity.EmployeeStatus;
+import com.ohgiraffers.hrbank.exception.InvalidDateRangeException;
+import com.ohgiraffers.hrbank.exception.UnsupportedUnitException;
 import com.ohgiraffers.hrbank.repository.ChangeLogRepository;
 import com.ohgiraffers.hrbank.repository.EmployeeRepository;
 import com.ohgiraffers.hrbank.service.DashBoardService;
@@ -49,11 +51,11 @@ public class BasicDashBoardService implements DashBoardService {
      * @param from   조회 시작일
      * @param to     조회 종료일
      * @return 해당 조건에 맞는 직원 수 (long)
-     * @throws IllegalArgumentException from이 to보다 이후인 경우
+     * @throws InvalidDateRangeException from이 to보다 이후인 경우
      */
     public long countHiredBetween(EmployeeStatus status, LocalDate from, LocalDate to) {
         if (from.isAfter(to)) {
-            throw new IllegalArgumentException("유효하지 않은 기간입니다.");
+            throw new InvalidDateRangeException(from, to);
         }
         return employeeRepository.countByStatusAndHireDateBetween(status, from, to);
     }
@@ -68,11 +70,11 @@ public class BasicDashBoardService implements DashBoardService {
      * @param from 조회 시작일
      * @param to   조회 종료일
      * @return 지정된 기간 동안 변경된 로그 수 (long)
-     * @throws IllegalArgumentException from이 to보다 이후인 경우
+     * @throws InvalidDateRangeException from이 to보다 이후인 경우
      */
     public long countUpdatesBetween(LocalDate from, LocalDate to) {
         if (from.isAfter(to)) {
-            throw new IllegalArgumentException("유효하지 않은 기간입니다.");
+            throw new InvalidDateRangeException(from, to);
         }
 
         Instant start = from.atStartOfDay(ZoneId.of("UTC")).toInstant();
@@ -154,7 +156,7 @@ public class BasicDashBoardService implements DashBoardService {
      *
      * @param unit ("day", "week", "month", "quarter", "year")
      * @return 해당하는 ChronoUnit (quarter는 MONTHS)
-     * @throws IllegalArgumentException 지원되지 않는 단위일 경우
+     * @throws UnsupportedUnitException 지원되지 않는 단위일 경우
      */
     private ChronoUnit parseUnit(String unit) {
         return switch (unit.toLowerCase()) {
@@ -162,7 +164,7 @@ public class BasicDashBoardService implements DashBoardService {
             case "week"    -> ChronoUnit.WEEKS;
             case "month", "quarter" -> ChronoUnit.MONTHS;
             case "year"    -> ChronoUnit.YEARS;
-            default -> throw new IllegalArgumentException("지원하지 않는 단위입니다. (unit: " + unit + ")");
+            default -> throw new UnsupportedUnitException(unit);
         };
     }
 

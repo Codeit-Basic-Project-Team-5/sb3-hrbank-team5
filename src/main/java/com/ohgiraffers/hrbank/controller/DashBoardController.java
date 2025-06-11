@@ -4,6 +4,7 @@ import com.ohgiraffers.hrbank.dto.data.EmployeeDistributionDto;
 import com.ohgiraffers.hrbank.dto.data.EmployeeDto;
 import com.ohgiraffers.hrbank.dto.data.EmployeeTrendDto;
 import com.ohgiraffers.hrbank.entity.EmployeeStatus;
+import com.ohgiraffers.hrbank.exception.InvalidRequestException;
 import com.ohgiraffers.hrbank.service.DashBoardService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.ArraySchema;
@@ -59,7 +60,7 @@ public class DashBoardController {
         } else if (status != null && fromDate != null && toDate != null) {
             count = dashBoardService.countHiredBetween(status, fromDate, toDate);
         } else {
-            throw new IllegalArgumentException("올바른 파라미터 조합이 아닙니다.");
+            throw new InvalidRequestException("올바른 파라미터 조합이 아닙니다.");
         }
 
         return ResponseEntity.ok(count);
