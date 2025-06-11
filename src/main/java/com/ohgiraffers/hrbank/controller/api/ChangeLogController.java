@@ -11,7 +11,13 @@ import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping("/api/change-logs")
@@ -36,9 +42,14 @@ public class ChangeLogController {
         @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME)
         Instant cursor,
         @RequestParam(defaultValue = "30") int size,
-        @RequestParam(defaultValue = "updatedAt") String sortField,
-        @RequestParam(defaultValue = "DESC")     String sortDir
+        // Swagger 기본값: at
+        @RequestParam(defaultValue = "at") String sortField,
+        @RequestParam(defaultValue = "DESC") String sortDir
     ) {
+        // at → updatedAt 로 치환
+        if ("at".equalsIgnoreCase(sortField)) {
+            sortField = "updatedAt";
+        }
         return ResponseEntity.ok(
             service.searchWithCursor(cursor, size, sortField, sortDir)
         );
