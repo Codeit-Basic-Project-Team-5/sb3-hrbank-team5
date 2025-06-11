@@ -17,7 +17,6 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @RequiredArgsConstructor
@@ -42,7 +41,7 @@ public class DepartmentController implements DepartmentApi {
     return ResponseEntity.status(HttpStatus.CREATED).body(createdDepartment);
   }
 
-  /** 부서 다건 조회
+  /** 부서 다건 조회 (페이징,정렬)
    * 입력값 : 소트필드=name , 소트디렉션 = asc , 사이즈 = 30 세가지.
    * 출력 :
    * contents List of DepartmentDTO
@@ -51,12 +50,12 @@ public class DepartmentController implements DepartmentApi {
   @Override
   @GetMapping(produces = MediaType.APPLICATION_JSON_VALUE)
   public ResponseEntity<DepartmentPageResponse<DepartmentDto>> findAll(
-      @RequestParam(value = "nameOrDescription", required = false) String nameOrDescription,
-      @RequestParam(value = "idAfter",required = false) Long idAfter,
-      @RequestParam(value = "cursor",required = false) String cursor,
-      @RequestParam(value = "sortField", defaultValue = "name") String sortField,
-      @RequestParam(value = "sortDirection", defaultValue = "asc") String sortDirection,
-      @RequestParam(value = "size", defaultValue = "10") int size
+      String nameOrDescription,
+      Long idAfter,
+      String cursor,
+      String sortField,
+      String sortDirection,
+      int size
   ) {
     DepartmentPageResponse<DepartmentDto> result = departmentService.findAllSorted(nameOrDescription, idAfter, cursor, sortField, sortDirection, size);
     return ResponseEntity.ok(result);
