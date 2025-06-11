@@ -16,8 +16,8 @@ import com.ohgiraffers.hrbank.repository.BackupRepository;
 import com.ohgiraffers.hrbank.repository.ChangeLogRepository;
 import com.ohgiraffers.hrbank.repository.EmployeeRepository;
 import com.ohgiraffers.hrbank.repository.FileRepository;
-import com.ohgiraffers.hrbank.storage.FileStorage;
 import com.ohgiraffers.hrbank.service.BackupService;
+import com.ohgiraffers.hrbank.storage.FileStorage;
 import jakarta.servlet.http.HttpServletRequest;
 import java.io.BufferedWriter;
 import java.io.IOException;
@@ -28,17 +28,18 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.Instant;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.TimeZone;
-import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
+import org.springframework.data.domain.Sort.Direction;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -64,13 +65,7 @@ public class BasicBackupService implements BackupService {
     public CursorPageResponseBackupDto findAll(BackupCursorPageRequest backupCursorPageRequest) {
 
         // 1. pageable 생성
-        Pageable pageable;
-        if(backupCursorPageRequest.sortDirection().equals("ASC")){
-            pageable = PageRequest.of(0, backupCursorPageRequest.size()+1, Sort.by(ASC, backupCursorPageRequest.sortField()));
-        }
-        else {
-            pageable = PageRequest.of(0, backupCursorPageRequest.size()+1, Sort.by(DESC, backupCursorPageRequest.sortField()));
-        }
+        Pageable pageable = PageRequest.of(0 , backupCursorPageRequest.size()+1 , Sort.by(Direction.fromString(backupCursorPageRequest.sortDirection()), backupCursorPageRequest.sortField()));
 
 
         // 2. size + 1개 조회로 hasNext 판단
@@ -78,7 +73,9 @@ public class BasicBackupService implements BackupService {
         if (backupCursorPageRequest.worker() != null && !backupCursorPageRequest.worker().isBlank()) {
             worker = "%" + backupCursorPageRequest.worker() + "%";
         }
-        List<BackupDto> content;
+        Page<BackupDto> content;
+
+        //첫번째 페이지일 경우
         if(backupCursorPageRequest.cursor()==null){
             content = backupRepository.findAllWithoutCursor(
                     worker,
@@ -86,51 +83,115 @@ public class BasicBackupService implements BackupService {
                     backupCursorPageRequest.startedAtFrom(),
                     backupCursorPageRequest.startedAtTo(),
                     pageable
-                ).stream()
-                .map(backupMapper::toDto)
-                .collect(Collectors.toList());
+                )
+                .map(backupMapper::toDto);
         }
+        //첫번째 페이지가 아닐 경우
         else{
-            content = backupRepository.findAllWithCursor(
-                    worker,
-                    backupCursorPageRequest.status(),
-                    backupCursorPageRequest.startedAtFrom(),
-                    backupCursorPageRequest.startedAtTo(),
-                    Instant.parse(backupCursorPageRequest.cursor()),
-                    backupCursorPageRequest.idAfter(),
-                    pageable
-                ).stream()
-                .map(backupMapper::toDto)
-                .collect(Collectors.toList());
+            // 정렬 필드가 startedAt일때
+            if(backupCursorPageRequest.sortField().equals("startedAt")){
+                //오름차순이면
+                if(backupCursorPageRequest.sortDirection().equals("ASC")){
+                    content = backupRepository.findAllWithCursorStartedAtAsc(
+                            worker,
+                            backupCursorPageRequest.status(),
+                            backupCursorPageRequest.startedAtFrom(),
+                            backupCursorPageRequest.startedAtTo(),
+                            Instant.parse(backupCursorPageRequest.cursor()),
+                            backupCursorPageRequest.idAfter(),
+                            pageable
+                        )
+                        .map(backupMapper::toDto);
+                }
+                //오름차순이 아니면
+                else{
+                    content = backupRepository.findAllWithCursorStartedAtDesc(
+                            worker,
+                            backupCursorPageRequest.status(),
+                            backupCursorPageRequest.startedAtFrom(),
+                            backupCursorPageRequest.startedAtTo(),
+                            Instant.parse(backupCursorPageRequest.cursor()),
+                            backupCursorPageRequest.idAfter(),
+                            pageable
+                        )
+                        .map(backupMapper::toDto);
+                }
+            }
+            //정렬 필드가 StartedAt이 아니면(endedAt이면)
+            else{
+                //오름차순일때
+                if(backupCursorPageRequest.sortDirection().equals("ASC")){
+                    content = backupRepository.findAllWithCursorEndedAtAsc(
+                            worker,
+                            backupCursorPageRequest.status(),
+                            backupCursorPageRequest.startedAtFrom(),
+                            backupCursorPageRequest.startedAtTo(),
+                            Instant.parse(backupCursorPageRequest.cursor()),
+                            backupCursorPageRequest.idAfter(),
+                            pageable
+                        )
+                        .map(backupMapper::toDto);
+                }
+                //내림차순일때
+                else {
+                    content = backupRepository.findAllWithCursorEndedAtDesc(
+                            worker,
+                            backupCursorPageRequest.status(),
+                            backupCursorPageRequest.startedAtFrom(),
+                            backupCursorPageRequest.startedAtTo(),
+                            Instant.parse(backupCursorPageRequest.cursor()),
+                            backupCursorPageRequest.idAfter(),
+                            pageable
+                        )
+                        .map(backupMapper::toDto);
+
+                }
+            }
+
+
+
         }
 
-        boolean hasNext = content.size() > backupCursorPageRequest.size();
+        boolean hasNext = content.getContent().size() > backupCursorPageRequest.size();
 
         //3. nextCursor 찾기
         String nextCursor = content
+            .getContent()
             .stream()
             .reduce((first, second) -> second)
             .map(BackupDto::startedAt)
             .map(Instant::toString)
+            .map(cursor -> hasNext ? cursor : null)
             .orElse(null);
 
         // 4. 현재 페이지의 마지막 요소 ID 찾기
         Long nextIdAfter = content
+            .getContent()
             .stream()
             .reduce((first, second) -> second)
             .map(BackupDto::id)
+            .map(nextId -> hasNext ? nextId : null)
             .orElse(null);
 
         // 5. size 찾기
-        int size = content.size()-1;
+        int size;
+        if (hasNext) {
+            size = content.getContent().size() - 1;
+        }
+        else{
+            size = content.getContent().size();
+        }
 
         // 6. totalElements 찾기
-        Long totalElements = backupRepository.count();
+        Long totalElements = content.getTotalElements();
 
-        // 7. 마지막 행 제거
-        content.remove(content.size() - 1);
+        // 7. 마지막 페이지가 아닐경우 해당 페이지의 마지막 행 제거
+        List<BackupDto> contentToList = new ArrayList<>(content.getContent());
+        if (hasNext && !contentToList.isEmpty()) {
+            contentToList.remove(contentToList.size() - 1);  // 마지막 요소 제거
+        }
 
-        return new CursorPageResponseBackupDto(content,nextCursor,nextIdAfter,size,totalElements,hasNext);
+        return new CursorPageResponseBackupDto(contentToList,nextCursor,nextIdAfter,size,totalElements,hasNext);
     }
 
     /**
@@ -192,8 +253,9 @@ public class BasicBackupService implements BackupService {
      */
     private Boolean isBackupRequired(){
         Instant lastEndedAt = backupRepository
-            .findAllByWorker("system")
+            .findAll()
             .stream()
+            .filter(backup -> backup.getEndedAt()!=null)
             .sorted(Comparator.comparing(Backup::getEndedAt).reversed())
             .map(Backup::getEndedAt)
             .limit(1)
@@ -209,7 +271,7 @@ public class BasicBackupService implements BackupService {
             .findFirst()
             .orElse(Instant.EPOCH);
 
-        if (lastUpdatedAt.isAfter(lastEndedAt)||lastUpdatedAt.equals(lastEndedAt)) {
+        if (lastUpdatedAt.isAfter(lastEndedAt) || lastUpdatedAt.equals(lastEndedAt)) {
             return true;
         }
         else {
@@ -232,6 +294,10 @@ public class BasicBackupService implements BackupService {
         return request.getRemoteAddr();
     }
 
+    /**
+     * Spring Scheduler를 사용하여 배치에 따른 백업 구현
+     * @return 백업결과Dto
+     */
     @Override
     @Scheduled(cron = "${backup.scheduler.cron}")
     @Transactional
@@ -246,6 +312,12 @@ public class BasicBackupService implements BackupService {
         return executeBackup(startedAt, backup);
     }
 
+    /**
+     * 백업 수행 메서드
+     * @param startedAt 백업 시작시간
+     * @param backup 백업하려고하는 인스턴스
+     * @return 백업결과 Dto
+     */
     private BackupDto executeBackup(Instant startedAt, Backup backup) {
         String name = "employee_backup_temp_name";
         String type = "employee_backup_temp_type";
@@ -274,8 +346,8 @@ public class BasicBackupService implements BackupService {
             }
 
             // STEP 4-1: 성공 처리
-            name = "employee_backup_"+file.getId()+"_"+startedAt.atZone(TimeZone.getDefault().toZoneId()) .format(
-                DateTimeFormatter.ofPattern("yyyy-MM-dd_HH:mm:ss"));
+            name = "employee_backup_"+backup.getId()+"_"+startedAt.atZone(TimeZone.getDefault().toZoneId()) .format(
+                DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss"))+".csv";
             type = "text/csv";
             Path filePath = Paths.get(root +"/"+ file.getId() + ".csv");
             filesize = Files.size(filePath);
@@ -304,8 +376,8 @@ public class BasicBackupService implements BackupService {
                 throw new RuntimeException(ioException);
             }
 
-            name = "backup_failed_log_"+logFile.getId()+"_"+startedAt.atZone(TimeZone.getDefault().toZoneId()).format(
-                DateTimeFormatter.ofPattern("yyyy-MM-dd_HH:mm:ss"));
+            name = "backup_failed_log_"+backup.getId()+"_"+startedAt.atZone(TimeZone.getDefault().toZoneId()).format(
+                DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss"))+".log";
             type = "text/plain";
             Path filePath = Paths.get(root +"/"+ logFile.getId() + ".log");
             try {
