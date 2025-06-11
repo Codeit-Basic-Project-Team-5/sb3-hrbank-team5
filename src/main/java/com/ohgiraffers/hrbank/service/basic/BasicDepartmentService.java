@@ -133,6 +133,9 @@ public class BasicDepartmentService implements DepartmentService {
         // JPQL 커서 쿼리 실행
         List<Department> departments = departmentRepository.findByCursor(
             keyword.isEmpty() ? null : keyword,
+            sortField,
+            sortDirection,
+            cursor,
             idAfter,
             pageable
         );
@@ -166,7 +169,7 @@ public class BasicDepartmentService implements DepartmentService {
 
         return new DepartmentPageResponse<>(
             dtoList,
-            cursor, // 커서
+            nextCursor,
             nextIdAfter,
             size,
             totalElements,
