@@ -73,26 +73,26 @@ INSERT INTO departments (name, description, established_date) VALUES
 
 
 INSERT INTO employees (name, email, employee_number, department_id, position, hire_date, status) VALUES
-    ('너굴', 'tom.nook@example.com', 'EMP-2024-001', (SELECT id FROM departments WHERE name = '개발사업부'), 'CEO', '2024-03-15', 'ACTIVE'),
-    ('여울', 'isabelle@example.com', 'EMP-2024-002', (SELECT id FROM departments WHERE name = '주민서비스부'), '비서실장', '2024-04-01', 'ACTIVE'),
-    ('부엉', 'blathers@example.com', 'EMP-2024-003', (SELECT id FROM departments WHERE name = '박물관사업부'), '선임 학예사', '2024-03-20', 'ACTIVE'),
-    ('콩돌이', 'timmy@example.com', 'EMP-2024-004', (SELECT id FROM departments WHERE name = '상점운영부'), '상점 직원', '2024-05-01', 'ACTIVE'),
-    ('밤돌이', 'tommy@example.com', 'EMP-2024-005', (SELECT id FROM departments WHERE name = '상점운영부'), '상점 직원', '2024-05-01', 'ACTIVE'),
-    ('도루묵씨', 'resetti@example.com', 'EMP-2024-006', (SELECT id FROM departments WHERE name = '개발사업부'), '안전 관리자', '2024-02-10', 'ACTIVE'),
-    ('패트릭', 'flick@example.com', 'EMP-2024-007', (SELECT id FROM departments WHERE name = '박물관사업부'), '곤충 수집 전문가', '2024-04-20', 'ACTIVE'),
-    ('그레이스', 'grace.ac@example.com', 'EMP-2024-008', (SELECT id FROM departments WHERE name = '패션디자인부'), '수석 디자이너', '2024-01-25', 'ACTIVE'),
-    ('고순이', 'sable.ac@example.com', 'EMP-2024-009', (SELECT id FROM departments WHERE name = '패션디자인부'), '재단 전문가', '2024-03-05', 'ACTIVE'),
-    ('고옥이', 'mabel.ac@example.com', 'EMP-2024-010', (SELECT id FROM departments WHERE name = '패션디자인부'), '판매 담당', '2024-03-05', 'ACTIVE'),
-    ('갑돌이', 'kappn@example.com', 'EMP-2024-011', (SELECT id FROM departments WHERE name = '개발사업부'), '해상 운송 담당', '2024-02-14', 'ACTIVE'),
-    ('늘봉', 'leif@example.com', 'EMP-2024-012', (SELECT id FROM departments WHERE name = '환경관리부'), '식물 관리 전문가', '2024-04-10', 'ACTIVE'),
-    ('마르셀', 'marcel@example.com', 'EMP-2024-013', (SELECT id FROM departments WHERE name = '주민서비스부'), '음악 콘텐츠 기획', '2024-03-28', 'ON_LEAVE'),
-    ('미애', 'midge@example.com', 'EMP-2024-014', (SELECT id FROM departments WHERE name = '패션디자인부'), '보조 디자이너', '2024-04-05', 'ACTIVE'),
-    ('미자', 'mitzi@example.com', 'EMP-2024-015', (SELECT id FROM departments WHERE name = '박물관사업부'), '전시물 연구원', '2024-04-12', 'ACTIVE'),
-    ('분홍', 'puddles@example.com', 'EMP-2024-016', (SELECT id FROM departments WHERE name = '주민서비스부'), '커뮤니케이션 담당', '2024-03-01', 'ACTIVE'),
-    ('빙티', 'dobie@example.com', 'EMP-2024-017', (SELECT id FROM departments WHERE name = '개발사업부'), '데이터 분석가', '2024-02-20', 'ACTIVE'),
-    ('사라', 'sara@example.com', 'EMP-2024-018', (SELECT id FROM departments WHERE name = '주민서비스부'), '주민 상담사', '2024-01-15', 'RESIGNED'),
-    ('산드라', 'sandra@example.com', 'EMP-2024-019', (SELECT id FROM departments WHERE name = '환경관리부'), '지형 설계 전문가', '2024-05-10', 'ACTIVE'),
-    ('아델레이드', 'adelaide@example.com', 'EMP-2024-020', (SELECT id FROM departments WHERE name = '상점운영부'), '재고 관리 담당', '2024-04-25', 'ACTIVE');
+    ('너굴', 'tom.nook@example.com', 'EMP-2024-1', (SELECT id FROM departments WHERE name = '개발사업부'), 'CEO', '2024-03-15', 'ACTIVE'),
+    ('여울', 'isabelle@example.com', 'EMP-2024-2', (SELECT id FROM departments WHERE name = '주민서비스부'), '비서실장', '2024-04-01', 'ACTIVE'),
+    ('부엉', 'blathers@example.com', 'EMP-2024-3', (SELECT id FROM departments WHERE name = '박물관사업부'), '선임 학예사', '2024-03-20', 'ACTIVE'),
+    ('콩돌이', 'timmy@example.com', 'EMP-2024-4', (SELECT id FROM departments WHERE name = '상점운영부'), '상점 직원', '2024-05-01', 'ACTIVE'),
+    ('밤돌이', 'tommy@example.com', 'EMP-2024-5', (SELECT id FROM departments WHERE name = '상점운영부'), '상점 직원', '2024-05-01', 'ACTIVE'),
+    ('도루묵씨', 'resetti@example.com', 'EMP-2024-6', (SELECT id FROM departments WHERE name = '개발사업부'), '안전 관리자', '2024-02-10', 'ACTIVE'),
+    ('패트릭', 'flick@example.com', 'EMP-2024-7', (SELECT id FROM departments WHERE name = '박물관사업부'), '곤충 수집 전문가', '2024-04-20', 'ACTIVE'),
+    ('그레이스', 'grace.ac@example.com', 'EMP-2024-8', (SELECT id FROM departments WHERE name = '패션디자인부'), '수석 디자이너', '2024-01-25', 'ACTIVE'),
+    ('고순이', 'sable.ac@example.com', 'EMP-2024-9', (SELECT id FROM departments WHERE name = '패션디자인부'), '재단 전문가', '2024-03-05', 'ACTIVE'),
+    ('고옥이', 'mabel.ac@example.com', 'EMP-2024-10', (SELECT id FROM departments WHERE name = '패션디자인부'), '판매 담당', '2024-03-05', 'ACTIVE'),
+    ('갑돌이', 'kappn@example.com', 'EMP-2024-11', (SELECT id FROM departments WHERE name = '개발사업부'), '해상 운송 담당', '2024-02-14', 'ACTIVE'),
+    ('늘봉', 'leif@example.com', 'EMP-2024-12', (SELECT id FROM departments WHERE name = '환경관리부'), '식물 관리 전문가', '2024-04-10', 'ACTIVE'),
+    ('마르셀', 'marcel@example.com', 'EMP-2024-13', (SELECT id FROM departments WHERE name = '주민서비스부'), '음악 콘텐츠 기획', '2024-03-28', 'ON_LEAVE'),
+    ('미애', 'midge@example.com', 'EMP-2024-14', (SELECT id FROM departments WHERE name = '패션디자인부'), '보조 디자이너', '2024-04-05', 'ACTIVE'),
+    ('미자', 'mitzi@example.com', 'EMP-2024-15', (SELECT id FROM departments WHERE name = '박물관사업부'), '전시물 연구원', '2024-04-12', 'ACTIVE'),
+    ('분홍', 'puddles@example.com', 'EMP-2024-16', (SELECT id FROM departments WHERE name = '주민서비스부'), '커뮤니케이션 담당', '2024-03-01', 'ACTIVE'),
+    ('빙티', 'dobie@example.com', 'EMP-2024-17', (SELECT id FROM departments WHERE name = '개발사업부'), '데이터 분석가', '2024-02-20', 'ACTIVE'),
+    ('사라', 'sara@example.com', 'EMP-2024-18', (SELECT id FROM departments WHERE name = '주민서비스부'), '주민 상담사', '2024-01-15', 'RESIGNED'),
+    ('산드라', 'sandra@example.com', 'EMP-2024-19', (SELECT id FROM departments WHERE name = '환경관리부'), '지형 설계 전문가', '2024-05-10', 'ACTIVE'),
+    ('아델레이드', 'adelaide@example.com', 'EMP-2024-20', (SELECT id FROM departments WHERE name = '상점운영부'), '재고 관리 담당', '2024-04-25', 'ACTIVE');
 
 
 -- 1) change_logs 더미 (15건)
