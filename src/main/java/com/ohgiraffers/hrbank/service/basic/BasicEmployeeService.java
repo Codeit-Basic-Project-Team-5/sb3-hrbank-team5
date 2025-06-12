@@ -13,7 +13,7 @@ import com.ohgiraffers.hrbank.entity.Department;
 import com.ohgiraffers.hrbank.entity.Employee;
 import com.ohgiraffers.hrbank.entity.EmployeeStatus;
 import com.ohgiraffers.hrbank.entity.File;
-import com.ohgiraffers.hrbank.exception.DepartmentNotFoundException;
+import com.ohgiraffers.hrbank.exception.department.DepartmentNotFoundException;
 import com.ohgiraffers.hrbank.exception.DuplicateEmailException;
 import com.ohgiraffers.hrbank.exception.EmployeeNotFoundException;
 import com.ohgiraffers.hrbank.exception.FileProcessingException;
@@ -62,7 +62,7 @@ public class BasicEmployeeService implements EmployeeService {
         Optional<FileCreateRequest> optionalFileCreateRequest) {
         Department department = departmentRepository.findDepartmentById(employeeCreateRequest.departmentId());
         if (department == null) {
-            throw new DepartmentNotFoundException(employeeCreateRequest.departmentId());
+            throw new DepartmentNotFoundException();
         }
 
         if (employeeRepository.existsByEmail(employeeCreateRequest.email())) {
@@ -109,7 +109,7 @@ public class BasicEmployeeService implements EmployeeService {
 
         Department newDepartment = departmentRepository.findDepartmentById(employeeUpdateRequest.departmentId());
         if (newDepartment == null) {
-            throw new DepartmentNotFoundException(employeeUpdateRequest.departmentId());
+            throw new DepartmentNotFoundException();
         }
         String newPosition = employeeUpdateRequest.position();
         LocalDate newHireDate = employeeUpdateRequest.hireDate();

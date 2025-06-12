@@ -1,4 +1,4 @@
-package com.ohgiraffers.hrbank.exception;
+package com.ohgiraffers.hrbank.exception.department;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.ResponseStatus;
