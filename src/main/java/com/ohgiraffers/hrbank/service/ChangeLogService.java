@@ -1,5 +1,6 @@
 package com.ohgiraffers.hrbank.service;
 
+import com.ohgiraffers.hrbank.dto.data.EmployeeDto;
 import com.ohgiraffers.hrbank.dto.request.ChangeLogRequest;
 import com.ohgiraffers.hrbank.dto.response.ChangeLogCursorResponse;
 import com.ohgiraffers.hrbank.dto.response.ChangeLogDetailResponse;
@@ -28,4 +29,10 @@ public interface ChangeLogService {
     ChangeLogDetailResponse getChangeLogDetail(Long id);
 
     List<ChangeLogDiffResponse> getDiffsByChangeLogId(Long changeLogId);
+
+    void logEmployeeCreate(
+        EmployeeDto created,
+        String memo,
+        HttpServletRequest request
+    );
 }

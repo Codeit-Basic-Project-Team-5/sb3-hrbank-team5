@@ -56,13 +56,9 @@ public class EmployeeController {
 
         EmployeeDto createdEmployee = employeeService.create(employeeCreateRequest, profileRequest);
 
-        changeLogService.registerChangeLog(
-            new ChangeLogRequest(
-                "CREATED",
-                createdEmployee.employeeNumber(),
-                employeeCreateRequest.memo(),
-                List.of()
-            ),
+        changeLogService.logEmployeeCreate(
+            createdEmployee,
+            employeeCreateRequest.memo(),
             request
         );
 
