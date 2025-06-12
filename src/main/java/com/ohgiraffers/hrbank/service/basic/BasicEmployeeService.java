@@ -2,8 +2,10 @@ package com.ohgiraffers.hrbank.service.basic;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import com.ohgiraffers.hrbank.dto.data.ChangeLogDiffDto;
 import com.ohgiraffers.hrbank.dto.data.EmployeeDto;
 import com.ohgiraffers.hrbank.dto.data.EmployeeSearchCondition;
+import com.ohgiraffers.hrbank.dto.request.ChangeLogRequest;
 import com.ohgiraffers.hrbank.dto.request.EmployeeCreateRequest;
 import com.ohgiraffers.hrbank.dto.request.EmployeeSearchRequest;
 import com.ohgiraffers.hrbank.dto.request.EmployeeUpdateRequest;
@@ -13,21 +15,25 @@ import com.ohgiraffers.hrbank.entity.Department;
 import com.ohgiraffers.hrbank.entity.Employee;
 import com.ohgiraffers.hrbank.entity.EmployeeStatus;
 import com.ohgiraffers.hrbank.entity.File;
-import com.ohgiraffers.hrbank.exception.department.DepartmentNotFoundException;
 import com.ohgiraffers.hrbank.exception.DuplicateEmailException;
 import com.ohgiraffers.hrbank.exception.EmployeeNotFoundException;
 import com.ohgiraffers.hrbank.exception.FileProcessingException;
 import com.ohgiraffers.hrbank.exception.InvalidRequestException;
+import com.ohgiraffers.hrbank.exception.department.DepartmentNotFoundException;
 import com.ohgiraffers.hrbank.mapper.EmployeeMapper;
 import com.ohgiraffers.hrbank.repository.DepartmentRepository;
 import com.ohgiraffers.hrbank.repository.EmployeeRepository;
 import com.ohgiraffers.hrbank.repository.FileRepository;
+import com.ohgiraffers.hrbank.service.ChangeLogService;
 import com.ohgiraffers.hrbank.service.EmployeeService;
 import com.ohgiraffers.hrbank.storage.FileStorage;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.transaction.Transactional;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.Base64;
 import java.util.List;
 import java.util.Optional;
@@ -48,6 +54,8 @@ public class BasicEmployeeService implements EmployeeService {
 
     private final FileRepository fileRepository;
     private final FileStorage fileStorage;
+
+    private final ChangeLogService changeLogService;
 
     // 파일 저장 경로 설정값 주입
     @Value("${hrbank.storage.local.root-path}")
@@ -135,28 +143,54 @@ public class BasicEmployeeService implements EmployeeService {
     }
 
     @Override
-    public void delete(Long employeeId) {
+    @Transactional
+    public void delete(Long employeeId, HttpServletRequest request) {
+
         Employee employee = employeeRepository.findById(employeeId)
             .orElseThrow(() -> new EmployeeNotFoundException(employeeId));
 
         // 프로필 이미지 정보를 미리 저장 (Employee 삭제 전에)
         File profileImageToDelete = employee.getProfileImage();
 
-        try {
-            // 1. 먼저 Employee 삭제 (외래키 제약 조건 해결)
-            employeeRepository.deleteById(employeeId);
-
-            // 2. 그 다음에 프로필 이미지 삭제 (있는 경우에만)
-            if (profileImageToDelete != null) {
-                // 실제 파일 삭제 처리
-                deletePhysicalFile(profileImageToDelete);
-
-                // File 엔티티 삭제
-                fileRepository.deleteById(profileImageToDelete.getId());
-            }
-        } catch (Exception e) {
-            throw new RuntimeException("직원 삭제 중 오류가 발생했습니다.", e);
+        List<ChangeLogDiffDto> diffs = new ArrayList<>();
+        diffs.add(new ChangeLogDiffDto("name", employee.getName(), "-"));
+        diffs.add(new ChangeLogDiffDto("email", employee.getEmail(), "-"));
+        diffs.add(new ChangeLogDiffDto("departmentName", employee.getDepartment().getName(), "-"));
+        diffs.add(new ChangeLogDiffDto("position", employee.getPosition(), "-"));
+        diffs.add(new ChangeLogDiffDto("hireDate", employee.getHireDate().toString(), "-"));
+        diffs.add(new ChangeLogDiffDto("employeeNumber", employee.getEmployeeNumber(), "-"));
+        diffs.add(new ChangeLogDiffDto("status", employee.getStatus().name(), "-"));
+        if (employee.getProfileImage() != null) {
+            diffs.add(new ChangeLogDiffDto(
+                "profileImageId",
+                employee.getProfileImage().getId().toString(),
+                "-"
+            ));
         }
+
+        changeLogService.registerChangeLog(
+            new ChangeLogRequest(
+                "DELETED",
+                employee.getEmployeeNumber(),
+                "직원 소프트 삭제 처리",
+                diffs
+            ),
+            request
+        );
+
+        // 1. 먼저 Employee 삭제 (외래키 제약 조건 해결)
+        employee.softDelete();
+
+
+        // 2. 그 다음에 프로필 이미지 삭제 (있는 경우에만)
+        if (profileImageToDelete != null) {
+            // 실제 파일 삭제 처리
+            deletePhysicalFile(profileImageToDelete);
+
+            // File 엔티티 삭제
+            fileRepository.deleteById(profileImageToDelete.getId());
+        }
+
     }
 
     @Override

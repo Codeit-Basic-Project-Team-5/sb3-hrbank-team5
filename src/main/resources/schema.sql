@@ -49,7 +49,7 @@ CREATE TABLE IF NOT EXISTS employees
     position         VARCHAR(50)  NOT NULL,
     hire_date        DATE         NOT NULL,
     status           VARCHAR(10)  NOT NULL
-        CHECK (status IN ('ACTIVE', 'ON_LEAVE', 'RESIGNED')),
+        CHECK (status IN ('ACTIVE','ON_LEAVE','RESIGNED','DELETED')),
     profile_image_id BIGINT
                                   REFERENCES files (id)
                                       ON DELETE SET NULL
