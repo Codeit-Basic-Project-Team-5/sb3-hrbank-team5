@@ -46,10 +46,10 @@ public class FileController {
     }
 
     @GetMapping(
-        path = "/{fileId}/download",
+        path = "/{id}/download",
         produces = MediaType.APPLICATION_OCTET_STREAM_VALUE
     )
-    public ResponseEntity<Resource> download(@PathVariable("fileId") Long fileId) {
-        return fileService.download(fileId);
+    public ResponseEntity<Resource> download(@PathVariable("id") Long id) {
+        return fileService.download(id);
     }
 }

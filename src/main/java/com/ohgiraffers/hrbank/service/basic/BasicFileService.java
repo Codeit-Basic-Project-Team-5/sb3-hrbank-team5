@@ -2,6 +2,7 @@ package com.ohgiraffers.hrbank.service.basic;
 
 import com.ohgiraffers.hrbank.dto.request.FileCreateRequest;
 import com.ohgiraffers.hrbank.entity.File;
+import com.ohgiraffers.hrbank.exception.FileNotFoundException;
 import com.ohgiraffers.hrbank.repository.FileRepository;
 import com.ohgiraffers.hrbank.service.FileService;
 import com.ohgiraffers.hrbank.storage.FileStorage;
@@ -45,7 +46,7 @@ public class BasicFileService implements FileService {
     @Override
     public ResponseEntity<Resource> download(Long fileId) {
         File file = fileRepository.findById(fileId)
-            .orElseThrow(() -> new IllegalArgumentException("파일이 존재하지 않습니다. id=" + fileId));
+            .orElseThrow(() -> new FileNotFoundException(fileId));
 
         String extension = extractExtension(file.getName());
         return fileStorage.download(file, extension);
@@ -54,5 +55,17 @@ public class BasicFileService implements FileService {
     private String extractExtension(String fileName) {
         int dotIdx = fileName.lastIndexOf(".");
         return (dotIdx != -1) ? fileName.substring(dotIdx) : "";
+    }
+
+    @Transactional
+    @Override
+    public void delete(Long fileId) {
+        File file = fileRepository.findById(fileId)
+            .orElseThrow(() -> new FileNotFoundException(fileId));
+
+        String extension = extractExtension(file.getName());
+
+        fileStorage.delete(file.getId(), extension);
+        fileRepository.delete(file);
     }
 }
