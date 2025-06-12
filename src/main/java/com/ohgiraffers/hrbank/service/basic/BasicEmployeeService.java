@@ -191,7 +191,6 @@ public class BasicEmployeeService implements EmployeeService {
             fileRepository.deleteById(profileImageToDelete.getId());
         }
 
-        employeeRepository.save(employee);
     }
 
     @Override
