@@ -64,7 +64,12 @@ public class Employee {
     private File profileImage;
 
     @OneToMany(mappedBy = "employee")
+    @Builder.Default
     private List<ChangeLog> changeLogs = new ArrayList<>();
+
+    public void softDelete() {
+        this.status = EmployeeStatus.DELETED;
+    }
 
     public Employee(String name, String email, String employeeNumber, Department department,
         String position, LocalDate hireDate, File profileImage) {

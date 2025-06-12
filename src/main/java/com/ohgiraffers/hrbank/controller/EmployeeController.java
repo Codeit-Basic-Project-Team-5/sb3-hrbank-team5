@@ -138,8 +138,8 @@ public class EmployeeController {
      * 직원 정보 삭제
      */
     @DeleteMapping(path = "{employeeId}")
-    public ResponseEntity<Void> delete(@PathVariable("employeeId") Long employeeId) {
-        employeeService.delete(employeeId);
+    public ResponseEntity<Void> delete(@PathVariable("employeeId") Long employeeId, HttpServletRequest request) {
+        employeeService.delete(employeeId, request);
         return ResponseEntity
             .status(HttpStatus.NO_CONTENT)
             .build();
