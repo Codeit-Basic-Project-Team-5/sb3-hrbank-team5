@@ -5,7 +5,9 @@ import com.ohgiraffers.hrbank.dto.request.DepartmentCreateRequest;
 import com.ohgiraffers.hrbank.dto.request.DepartmentUpdateRequest;
 import com.ohgiraffers.hrbank.dto.response.DepartmentPageResponse;
 import com.ohgiraffers.hrbank.entity.Department;
-import com.ohgiraffers.hrbank.exception.DepartmentHasEmployeesException;
+import com.ohgiraffers.hrbank.exception.DuplicatedNameException;
+import com.ohgiraffers.hrbank.exception.department.DepartmentHasEmployeesException;
+import com.ohgiraffers.hrbank.exception.department.DepartmentNotFoundException;
 import com.ohgiraffers.hrbank.repository.DepartmentRepository;
 import com.ohgiraffers.hrbank.repository.EmployeeRepository;
 import com.ohgiraffers.hrbank.service.DepartmentService;
@@ -38,7 +40,7 @@ public class BasicDepartmentService implements DepartmentService {
 
         String name = request.name();
         if (departmentRepository.existsByName(name)){
-            throw new IllegalArgumentException("이미 존재하는 이름입니다.");
+            throw new DuplicatedNameException();
         }
         String description = request.description();
         LocalDate established_date = request.establishedDate();
@@ -83,12 +85,12 @@ public class BasicDepartmentService implements DepartmentService {
     @Override
     public DepartmentDto update(Long id,DepartmentUpdateRequest request) {
         if(!departmentRepository.existsById(id)){
-            throw new IllegalArgumentException("존재하지 않는 부서입니다.");
+            throw new DepartmentNotFoundException();
         }
         String name = request.name();
         Department department = departmentRepository.findDepartmentById(id);
         if (!department.getName().equals(name) && departmentRepository.existsByName(name)){
-            throw new IllegalArgumentException("이미 존재하는 이름입니다.");
+            throw new DuplicatedNameException();
         }
 
         department.update(name,request.description(),request.establishedDate());
@@ -102,7 +104,7 @@ public class BasicDepartmentService implements DepartmentService {
     @Override
     public void delete(Long id) {
         if (!departmentRepository.existsById(id)){
-            throw new IllegalArgumentException("존재하지 않는 Department입니다.");
+            throw new DepartmentNotFoundException();
         }
         if(employeeRepository.countByDepartmentId(id) != 0){
             throw new DepartmentHasEmployeesException();
