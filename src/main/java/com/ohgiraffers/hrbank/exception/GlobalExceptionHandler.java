@@ -9,11 +9,6 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
-  @ExceptionHandler(DepartmentHasEmployeesException.class)
-  public ResponseEntity<String> handleDeptHasEmp(DepartmentHasEmployeesException exc) {
-    return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(exc.getMessage());
-  }
-
   /**
    * 직원 찾을 수 없음 -> 404
    */
@@ -21,17 +16,6 @@ public class GlobalExceptionHandler {
   public ResponseEntity<ErrorResponse> handleEmployeeNotFound(EmployeeNotFoundException ex) {
 
     ErrorResponse response = new ErrorResponse(OffsetDateTime.now(), 404, ex.getMessage(), "요청한 직원이 존재하지 않습니다.");
-
-    return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
-  }
-
-  /**
-   * 부서 찾을 수 없음 -> 404
-   */
-  @ExceptionHandler(DepartmentNotFoundException.class)
-  public ResponseEntity<ErrorResponse> handleDepartmentNotFound(DepartmentNotFoundException ex) {
-
-    ErrorResponse response = new ErrorResponse(OffsetDateTime.now(), 404, ex.getMessage(), "요청한 부서가 존재하지 않습니다.");
 
     return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
   }
