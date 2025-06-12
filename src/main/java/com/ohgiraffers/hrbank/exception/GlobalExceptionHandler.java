@@ -63,4 +63,13 @@ public class GlobalExceptionHandler {
 
     return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
   }
+
+  /**
+   * 파일 찾을 수 없음 -> 404
+   */
+  @ExceptionHandler(FileNotFoundException.class)
+  public ResponseEntity<ErrorResponse> handleNotFound(FileNotFoundException ex) {
+    ErrorResponse body = new ErrorResponse(OffsetDateTime.now(),404, ex.getMessage(), "파일을 찾을 수 없습니다.");
+    return ResponseEntity.status(HttpStatus.NOT_FOUND).body(body);
+  }
 }
