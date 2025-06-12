@@ -178,7 +178,11 @@ public class BasicEmployeeService implements EmployeeService {
             request
         );
 
+        // 1. 먼저 Employee 삭제 (외래키 제약 조건 해결)
         employee.softDelete();
+
+
+        // 2. 그 다음에 프로필 이미지 삭제 (있는 경우에만)
         if (profileImageToDelete != null) {
             // 실제 파일 삭제 처리
             deletePhysicalFile(profileImageToDelete);
