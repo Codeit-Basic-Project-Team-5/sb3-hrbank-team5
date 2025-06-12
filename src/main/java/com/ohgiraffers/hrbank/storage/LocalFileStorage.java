@@ -1,6 +1,8 @@
 package com.ohgiraffers.hrbank.storage;
 
 import com.ohgiraffers.hrbank.entity.File;
+import com.ohgiraffers.hrbank.exception.FileNotFoundException;
+import com.ohgiraffers.hrbank.exception.FileProcessingException;
 import jakarta.annotation.PostConstruct;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
@@ -45,8 +47,7 @@ public class LocalFileStorage implements FileStorage {
         try {
             Files.createDirectories(root);
         } catch (IOException e) {
-            throw new IllegalStateException(
-                "디렉토리를 초기화할 수 없습니다: " + root, e);
+            throw new FileProcessingException("디렉토리를 초기화할 수 없습니다: " + root, e);
         }
     }
 
@@ -56,7 +57,7 @@ public class LocalFileStorage implements FileStorage {
         try {
             return new FileOutputStream(path.toFile());
         } catch (IOException e) {
-            throw new IllegalStateException("파일 ID " + id + "에 대한 출력 스트림을 열 수 없습니다.", e);
+            throw new FileProcessingException("파일 ID " + id + "에 대한 출력 스트림을 열 수 없습니다.", e);
         }
     }
 
@@ -66,11 +67,10 @@ public class LocalFileStorage implements FileStorage {
         try {
             return new FileInputStream(path.toFile());
         } catch (IOException e) {
-            throw new IllegalStateException("파일 ID " + id + "에 대한 입력 스트림을 열 수 없습니다.", e);
+            throw new FileProcessingException("파일 ID " + id + "에 대한 입력 스트림을 열 수 없습니다.", e);
         }
     }
 
-    //Dto 수정
     @Override
     public ResponseEntity<Resource> download(File file, String extension) {
         Path path = resolvePath(file.getId(), extension);
@@ -79,16 +79,34 @@ public class LocalFileStorage implements FileStorage {
         try {
             resource = new UrlResource(path.toUri());
             if (!resource.exists() || !resource.isReadable()) {
-                throw new IllegalStateException("파일을 읽을 수 없습니다: " + path);
+                throw new FileProcessingException("파일을 읽을 수 없습니다: " + path);
             }
         } catch (MalformedURLException e) {
-            throw new IllegalStateException("리소스를 생성할 수 없습니다: " + path, e);
+            throw new FileProcessingException("리소스를 생성할 수 없습니다: " + path, e);
         }
 
         return ResponseEntity.ok()
-            .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + file.getName() + "\"")
+            .header(
+                HttpHeaders.CONTENT_DISPOSITION,
+                "attachment; filename=\"" + file.getName() + "\""
+            )
             .contentType(MediaType.parseMediaType(file.getType()))
             .contentLength(file.getSize())
             .body(resource);
+    }
+
+    @Override
+    public void delete(Long id, String extension) {
+        Path path = resolvePath(id, extension).normalize();
+
+        try {
+            if (Files.exists(path)) {
+                Files.delete(path);
+            } else {
+                throw new FileNotFoundException(id);
+            }
+        } catch (IOException e) {
+            throw new FileProcessingException("파일 삭제 실패: " + path, e);
+        }
     }
 }
