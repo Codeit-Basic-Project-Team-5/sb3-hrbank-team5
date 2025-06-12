@@ -10,9 +10,12 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
+import jakarta.persistence.OneToMany;
 import jakarta.persistence.OneToOne;
 import jakarta.persistence.Table;
 import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Objects;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -60,7 +63,11 @@ public class Employee {
     @JoinColumn(name = "profile_image_id")
     private File profileImage;
 
-    public Employee(String name, String email, String employeeNumber, Department department, String position, LocalDate hireDate, File profileImage) {
+    @OneToMany(mappedBy = "employee")
+    private List<ChangeLog> changeLogs = new ArrayList<>();
+
+    public Employee(String name, String email, String employeeNumber, Department department,
+        String position, LocalDate hireDate, File profileImage) {
         this.name = Objects.requireNonNull(name, "Name must not be null");
         this.email = Objects.requireNonNull(email, "Email must not be null");
         this.employeeNumber = employeeNumber;
@@ -71,7 +78,8 @@ public class Employee {
         this.profileImage = profileImage;
     }
 
-    public void update(String newName, String newEmail, Department newDepartment, String newPosition, LocalDate newHireDate, EmployeeStatus newStatus, File newProfileImage) {
+    public void update(String newName, String newEmail, Department newDepartment,
+        String newPosition, LocalDate newHireDate, EmployeeStatus newStatus, File newProfileImage) {
         if (newName != null && !newName.equals(this.name)) {
             this.name = newName;
         }

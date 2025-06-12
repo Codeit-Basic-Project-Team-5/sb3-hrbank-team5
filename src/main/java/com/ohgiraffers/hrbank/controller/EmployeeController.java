@@ -1,15 +1,22 @@
 package com.ohgiraffers.hrbank.controller;
 
+import com.ohgiraffers.hrbank.dto.data.ChangeLogDiffDto;
 import com.ohgiraffers.hrbank.dto.data.EmployeeDto;
+import com.ohgiraffers.hrbank.dto.request.ChangeLogRequest;
 import com.ohgiraffers.hrbank.dto.request.EmployeeCreateRequest;
 import com.ohgiraffers.hrbank.dto.request.EmployeeSearchRequest;
 import com.ohgiraffers.hrbank.dto.request.EmployeeUpdateRequest;
 import com.ohgiraffers.hrbank.dto.request.FileCreateRequest;
 import com.ohgiraffers.hrbank.dto.response.CursorPageResponseEmployeeDto;
 import com.ohgiraffers.hrbank.entity.EmployeeStatus;
+import com.ohgiraffers.hrbank.service.ChangeLogService;
 import com.ohgiraffers.hrbank.service.EmployeeService;
+import jakarta.servlet.http.HttpServletRequest;
 import java.io.IOException;
 import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.format.annotation.DateTimeFormat;
@@ -33,6 +40,7 @@ import org.springframework.web.multipart.MultipartFile;
 public class EmployeeController {
 
     private final EmployeeService employeeService;
+    private final ChangeLogService changeLogService;
 
     /**
      * 직원 등록
@@ -40,12 +48,24 @@ public class EmployeeController {
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<EmployeeDto> create(
         @RequestPart("employee") EmployeeCreateRequest employeeCreateRequest,
-        @RequestPart(value = "profile", required = false) MultipartFile profile
+        @RequestPart(value = "profile", required = false) MultipartFile profile,
+        HttpServletRequest request
     ) {
         Optional<FileCreateRequest> profileRequest = Optional.ofNullable(profile)
             .flatMap(this::resolveProfileRequest);
 
         EmployeeDto createdEmployee = employeeService.create(employeeCreateRequest, profileRequest);
+
+        changeLogService.registerChangeLog(
+            new ChangeLogRequest(
+                "CREATED",
+                createdEmployee.employeeNumber(),
+                employeeCreateRequest.memo(),
+                List.of()
+            ),
+            request
+        );
+
         return ResponseEntity.status(HttpStatus.CREATED).body(createdEmployee);
     }
 
@@ -59,15 +79,63 @@ public class EmployeeController {
     public ResponseEntity<EmployeeDto> update(
         @PathVariable("employeeId") Long employeeId,
         @RequestPart("employee") EmployeeUpdateRequest employeeUpdateRequest,
-        @RequestPart(value = "profile", required = false) MultipartFile profile
+        @RequestPart(value = "profile", required = false) MultipartFile profile,
+        HttpServletRequest request
     ) {
         Optional<FileCreateRequest> profileRequest = Optional.ofNullable(profile)
             .flatMap(this::resolveProfileRequest);
 
-        EmployeeDto updatedEmployee = employeeService.update(employeeId, employeeUpdateRequest, profileRequest);
-        return ResponseEntity
-            .status(HttpStatus.OK)
-            .body(updatedEmployee);
+        EmployeeDto before = employeeService.find(employeeId);
+
+        EmployeeDto updatedEmployee = employeeService.update(employeeId, employeeUpdateRequest,
+            profileRequest);
+
+        // 변경된 필드 목록 생성
+        List<ChangeLogDiffDto> diffs = new ArrayList<>();
+
+        if (!Objects.equals(before.name(), updatedEmployee.name())) {
+            diffs.add(new ChangeLogDiffDto("name", before.name(), updatedEmployee.name()));
+        }
+        if (!Objects.equals(before.email(), updatedEmployee.email())) {
+            diffs.add(new ChangeLogDiffDto("email", before.email(), updatedEmployee.email()));
+        }
+        if (!Objects.equals(before.position(), updatedEmployee.position())) {
+            diffs.add(
+                new ChangeLogDiffDto("position", before.position(), updatedEmployee.position()));
+        }
+        if (!Objects.equals(before.departmentName(), updatedEmployee.departmentName())) {
+            diffs.add(new ChangeLogDiffDto(
+                "departmentName",
+                before.departmentName(),
+                updatedEmployee.departmentName()
+            ));
+        }
+        if (!Objects.equals(before.hireDate(), updatedEmployee.hireDate())) {
+            diffs.add(new ChangeLogDiffDto(
+                "hireDate",
+                before.hireDate().toString(),
+                updatedEmployee.hireDate().toString()
+            ));
+        }
+        if (!Objects.equals(before.status(), updatedEmployee.status())) {
+            diffs.add(new ChangeLogDiffDto(
+                "status",
+                before.status(),
+                updatedEmployee.status()
+            ));
+        }
+
+        changeLogService.registerChangeLog(
+            new ChangeLogRequest(
+                "UPDATED",
+                updatedEmployee.employeeNumber(),
+                employeeUpdateRequest.memo(),
+                diffs
+            ),
+            request
+        );
+
+        return ResponseEntity.ok(updatedEmployee);
     }
 
     /**
