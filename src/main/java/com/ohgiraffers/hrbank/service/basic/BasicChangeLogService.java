@@ -1,5 +1,7 @@
 package com.ohgiraffers.hrbank.service.basic;
 
+import com.ohgiraffers.hrbank.dto.data.ChangeLogDiffDto;
+import com.ohgiraffers.hrbank.dto.data.EmployeeDto;
 import com.ohgiraffers.hrbank.dto.request.ChangeLogRequest;
 import com.ohgiraffers.hrbank.dto.response.ChangeLogCursorResponse;
 import com.ohgiraffers.hrbank.dto.response.ChangeLogDetailResponse;
@@ -16,6 +18,7 @@ import com.ohgiraffers.hrbank.service.ChangeLogService;
 import jakarta.servlet.http.HttpServletRequest;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.NoSuchElementException;
 import lombok.RequiredArgsConstructor;
@@ -51,6 +54,31 @@ public class BasicChangeLogService implements ChangeLogService {
 
         changeLogRepository.save(changeLog);
         return changeLog.getId();
+    }
+
+    @Override
+    public void logEmployeeCreate(
+        EmployeeDto after,
+        String memo,
+        HttpServletRequest request
+    ) {
+        List<ChangeLogDiffDto> diffs = new ArrayList<>();
+
+        diffs.add(new ChangeLogDiffDto("name", "-", after.name()));
+        diffs.add(new ChangeLogDiffDto("email", "-", after.email()));
+        diffs.add(new ChangeLogDiffDto("departmentName", "-", after.departmentName()));
+        diffs.add(new ChangeLogDiffDto("position", "-", after.position()));
+        diffs.add(new ChangeLogDiffDto("hireDate", "-", after.hireDate().toString()));
+        diffs.add(new ChangeLogDiffDto("employeeNumber", "-", after.employeeNumber()));
+        diffs.add(new ChangeLogDiffDto("status", "-", after.status()));
+
+        ChangeLogRequest req = new ChangeLogRequest(
+            "CREATED",
+            after.employeeNumber(),
+            memo,
+            diffs
+        );
+        registerChangeLog(req, request);
     }
 
     @Override
