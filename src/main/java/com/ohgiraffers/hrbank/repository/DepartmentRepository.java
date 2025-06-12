@@ -62,8 +62,7 @@ public interface DepartmentRepository extends JpaRepository<Department, Integer>
     WHERE
         (:nameOrDescription IS NULL OR d.name LIKE %:nameOrDescription% OR d.description LIKE %:nameOrDescription%)
         AND (
-            (:Cursor IS NULL)
-            OR (d.establishedDate > :Cursor)
+            d.establishedDate > :Cursor
             OR (d.establishedDate = :Cursor AND d.id > :IdAfter)
         )
     ORDER BY d.establishedDate ASC, d.id ASC
@@ -81,8 +80,7 @@ public interface DepartmentRepository extends JpaRepository<Department, Integer>
     WHERE
         (:nameOrDescription IS NULL OR d.name LIKE %:nameOrDescription% OR d.description LIKE %:nameOrDescription%)
         AND (
-            (:Cursor IS NULL)
-            OR (d.establishedDate < :Cursor)
+            (d.establishedDate < :Cursor)
             OR (d.establishedDate = :Cursor AND d.id < :IdAfter)
         )
     ORDER BY d.establishedDate DESC, d.id DESC
@@ -93,7 +91,17 @@ public interface DepartmentRepository extends JpaRepository<Department, Integer>
         @Param("IdAfter") Long idAfter,
         Pageable pageable
     );
-
+    // 커서가 없을 때는 모든 데이터를 가져옴
+    @Query("""
+SELECT d FROM Department d
+WHERE
+    (:nameOrDescription IS NULL OR d.name LIKE %:nameOrDescription% OR d.description LIKE %:nameOrDescription%)
+ORDER BY d.establishedDate ASC, d.id ASC
+""")
+    List<Department> findByCursorDateAscWithoutCursor(
+        @Param("nameOrDescription") String nameOrDescription,
+        Pageable pageable
+    );
     // name이나 description에 검색어가 포함된 개수 반환
     @Query("SELECT COUNT(d) FROM Department d WHERE d.name LIKE %:keyword% OR d.description LIKE %:keyword%")
     long countByNameOrDescription(@Param("keyword") String keyword);

@@ -151,8 +151,14 @@ public class BasicDepartmentService implements DepartmentService {
                 );
             }
         } else if ("establishedDate".equals(sortField)) {
-            LocalDate cursorDate = (cursor == null) ? null : LocalDate.parse(cursor);
-            if ("asc".equalsIgnoreCase(sortDirection)) {
+            LocalDate cursorDate = (cursor == null || cursor.isBlank()) ? null : LocalDate.parse(cursor); // cursor를 String에서 LocalDate로 파싱
+            System.out.println("cursor 값: " + cursor + ", cursorDate: " + cursorDate + ", 타입: " + (cursorDate != null ? cursorDate.getClass() : null));
+            if(cursorDate == null){
+                departments = departmentRepository.findByCursorDateAscWithoutCursor(
+                    keyword.isEmpty() ? null : keyword,
+                    pageable
+                );
+            } else if ("asc".equalsIgnoreCase(sortDirection)) {
                 departments = departmentRepository.findByCursorDateAsc(
                     keyword.isEmpty() ? null : keyword,
                     cursorDate,
