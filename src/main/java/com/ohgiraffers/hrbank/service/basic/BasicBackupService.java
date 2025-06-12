@@ -329,6 +329,7 @@ public class BasicBackupService implements BackupService {
             try (OutputStream os = fileStorage.put(file.getId(), ".csv");
                 BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(os))) {
 
+                writer.write('\uFEFF'); // UTF-8 BOM
                 writer.write("ID,직원번호,이름,이메일,부서,직급,입사일,상태\n");
 
                 int page = 0;
