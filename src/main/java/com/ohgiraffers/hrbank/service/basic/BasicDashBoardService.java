@@ -135,7 +135,7 @@ public class BasicDashBoardService implements DashBoardService {
                 rangeEnd = endDate;
             }
 
-            long count = employeeRepository.countWorkingBetweenDates(startDate, rangeEnd);
+            long count = employeeRepository.countWorkingUpToDate(rangeEnd);
 
             long change = trends.isEmpty() ? 0 : count - prevCount;
             double changeRate = prevCount == 0
