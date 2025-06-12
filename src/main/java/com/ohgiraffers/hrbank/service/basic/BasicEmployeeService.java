@@ -3,6 +3,7 @@ package com.ohgiraffers.hrbank.service.basic;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.ohgiraffers.hrbank.dto.data.EmployeeDto;
+import com.ohgiraffers.hrbank.dto.data.EmployeeSearchCondition;
 import com.ohgiraffers.hrbank.dto.request.EmployeeCreateRequest;
 import com.ohgiraffers.hrbank.dto.request.EmployeeSearchRequest;
 import com.ohgiraffers.hrbank.dto.request.EmployeeUpdateRequest;
@@ -16,7 +17,6 @@ import com.ohgiraffers.hrbank.exception.DepartmentNotFoundException;
 import com.ohgiraffers.hrbank.exception.DuplicateEmailException;
 import com.ohgiraffers.hrbank.exception.EmployeeNotFoundException;
 import com.ohgiraffers.hrbank.exception.FileProcessingException;
-import com.ohgiraffers.hrbank.exception.InvalidCursorException;
 import com.ohgiraffers.hrbank.exception.InvalidRequestException;
 import com.ohgiraffers.hrbank.mapper.EmployeeMapper;
 import com.ohgiraffers.hrbank.repository.DepartmentRepository;
@@ -30,8 +30,6 @@ import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
 import java.util.Base64;
 import java.util.List;
-import java.util.Map;
-import java.util.NoSuchElementException;
 import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
@@ -170,87 +168,17 @@ public class BasicEmployeeService implements EmployeeService {
     }
 
     @Override
-    public CursorPageResponseEmployeeDto findEmployees(EmployeeSearchRequest searchRequest) {
-        // 1. 검색 조건 추출
-        String nameOrEmail = searchRequest.nameOrEmail();
-        String departmentName = searchRequest.departmentName();
-        String position = searchRequest.position();
-        String employeeNumber = searchRequest.employeeNumber();
-        LocalDate hireDateFrom = searchRequest.hireDateFrom();
-        LocalDate hireDateTo = searchRequest.hireDateTo();
-        EmployeeStatus status = searchRequest.status();
+    public CursorPageResponseEmployeeDto findEmployees(EmployeeSearchRequest request) {
 
-        // 2. 정렬 및 페이지네이션 정보 추출
-        String sortField = searchRequest.sortField();
-        boolean isDescending = searchRequest.isDescending();
-        int size = searchRequest.size();
+        // 페이지 크기 결정 및 페이징 설정
+        Pageable pageable = PageRequest.of(0, request.size() + 1);
 
-        // cursor와 idAfter 중 우선순위 결정
-        Long idAfter = null;
-        Object lastSortValue = null;
+        // 검색 조건 생성 및 데이터 조회
+        EmployeeSearchCondition searchCondition = createSearchCondition(request, pageable);
+        List<Employee> employees = employeeRepository.searchEmployees(searchCondition);
 
-        if (searchRequest.cursor() != null && !searchRequest.cursor().isEmpty()) {
-            try {
-                // cursor가 있으면 cursor 우선 사용
-                CursorInfo cursorInfo = decodeCursor(searchRequest.cursor());
-                idAfter = cursorInfo.idAfter();
-                lastSortValue = cursorInfo.sortValue();
-            } catch (Exception e) {
-                throw new InvalidCursorException("잘못된 커서 형식입니다: " + searchRequest.cursor());
-            }
-        } else if (searchRequest.idAfter() != null) {
-            // cursor가 없으면 idAfter 사용 (기존 방식)
-            idAfter = searchRequest.idAfter();
-            lastSortValue = extractLastSortValue(idAfter, sortField);
-        }
-
-        // 3. Pageable 생성 (size + 1로 설정하여 다음 페이지 존재 여부 확인)
-        Pageable pageable = PageRequest.of(0, size + 1);
-
-        // 4. 정렬 기준에 따라 적절한 Repository 메서드 호출
-        List<Employee> employees = fetchEmployeesBySortCriteria(
-            sortField, nameOrEmail, departmentName, position, employeeNumber,
-            hireDateFrom, hireDateTo, status, idAfter, lastSortValue, isDescending, pageable
-        );
-
-        // 5. 다음 페이지 존재 여부 확인
-        boolean hasNext = employees.size() > size;
-        if (hasNext) {
-            employees = employees.subList(0, size); // 실제 반환할 데이터만 유지
-        }
-
-        // 6. Employee -> EmployeeDto 변환
-        List<EmployeeDto> employeeDtos = employees.stream()
-            .map(employeeMapper::toDto)
-            .toList();
-
-        // 7. 다음 커서 생성
-        String nextCursor = null;
-        Long nextIdAfter = null;
-        if (hasNext && !employees.isEmpty()) {
-            Employee lastEmployee = employees.get(employees.size() - 1);
-            nextIdAfter = lastEmployee.getId();
-            nextCursor = generateNextCursor(lastEmployee, sortField);
-        }
-
-        // 8. 총 개수 조회 (첫 페이지일 때만 조회하여 성능 최적화)
-        Long totalElements = null;
-        if (idAfter == null) { // 첫 페이지인 경우
-            totalElements = employeeRepository.countEmployeesWithConditions(
-                nameOrEmail, departmentName, position, employeeNumber,
-                hireDateFrom, hireDateTo, status
-            );
-        }
-
-        // 9. 응답 생성
-        return new CursorPageResponseEmployeeDto(
-            employeeDtos,
-            nextCursor,
-            nextIdAfter,
-            size,
-            totalElements,
-            hasNext
-        );
+        // 페이징 처리 및 응답 생성
+        return buildCursorPageResponse(employees, request.size(), request);
     }
 
     // =================================================================
@@ -288,141 +216,148 @@ public class BasicEmployeeService implements EmployeeService {
     }
 
     /**
-     * Cursor 디코딩 메서드
+     * 검색 조건 객체 생성
      */
-    private CursorInfo decodeCursor(String cursor) {
+    private EmployeeSearchCondition createSearchCondition(EmployeeSearchRequest request, Pageable pageable) {
+        String decodedCursor = decodeCursorIfPresent(request.cursor());
+
+        return new EmployeeSearchCondition(
+            request.nameOrEmail(),
+            request.departmentName(),
+            request.position(),
+            request.employeeNumber(),
+            request.hireDateFrom(),
+            request.hireDateTo(),
+            request.status(),
+            request.idAfter(),
+            decodedCursor,
+            request.sortField(),
+            request.sortDirection(),
+            pageable
+        );
+    }
+
+    /**
+     * 커서가 있으면 디코딩, 없으면 null 반환
+     */
+    private String decodeCursorIfPresent(String cursor) {
+        if (cursor == null || cursor.trim().isEmpty()) {
+            return null;
+        }
+
         try {
-            // Base64 디코딩
             byte[] decodedBytes = Base64.getDecoder().decode(cursor);
-            String decodedJson = new String(decodedBytes, StandardCharsets.UTF_8);
-
-            // JSON 파싱
-            ObjectMapper objectMapper = new ObjectMapper();
-            objectMapper.registerModule(new JavaTimeModule());
-
-            @SuppressWarnings("unchecked")
-            Map<String, Object> cursorMap = objectMapper.readValue(decodedJson, Map.class);
-
-            Long lastId = Long.valueOf(cursorMap.get("id").toString());
-            String sortBy = cursorMap.get("sortBy").toString();
-            Object sortValue = cursorMap.get("sortValue");
-
-            // sortValue 타입 변환
-            Object typedSortValue = convertSortValue(sortValue, sortBy);
-
-            return new CursorInfo(lastId, sortBy, typedSortValue);
-
-        } catch (Exception e) {
-            throw new InvalidCursorException("잘못된 커서 형식입니다: " + cursor);
-        }
-    }
-
-    /**
-     * Cursor 정보를 담는 내부 클래스
-     */
-    private record CursorInfo(Long idAfter, String sortField, Object sortValue) {}
-
-    /**
-     * sortValue를 적절한 타입으로 변환
-     */
-    private Object convertSortValue(Object sortValue, String sortBy) {
-        if (sortValue == null) return null;
-
-        try {
-            return switch (sortBy) {
-                case "name", "employeeNumber" -> sortValue.toString();
-                case "hireDate" -> LocalDate.parse(sortValue.toString());
-                default -> {
-                    throw new InvalidRequestException("지원하지 않는 정렬 기준입니다: " + sortBy);
-                }
-            };
-        } catch (Exception e) {
-            throw new InvalidCursorException("커서의 정렬 값 변환에 실패했습니다.");
-        }
-    }
-
-    /**
-     * 정렬 기준에 따라 적절한 Repository 메서드를 호출 (lastSortValue를 직접 받도록 수정)
-     */
-    private List<Employee> fetchEmployeesBySortCriteria(
-        String sortField, String nameOrEmail, String departmentName, String position,
-        String employeeNumber, LocalDate hireDateFrom, LocalDate hireDateTo,
-        EmployeeStatus status, Long idAfter, Object lastSortValue, boolean isDescending, Pageable pageable) {
-
-        try {
-            return switch (sortField) {
-                case "name" -> employeeRepository.findEmployeesWithCursorByName(
-                    nameOrEmail, departmentName, position, employeeNumber,
-                    hireDateFrom, hireDateTo, status, idAfter, (String) lastSortValue,
-                    isDescending, pageable
-                );
-                case "hireDate" -> employeeRepository.findEmployeesWithCursorByHireDate(
-                    nameOrEmail, departmentName, position, employeeNumber,
-                    hireDateFrom, hireDateTo, status, idAfter, (LocalDate) lastSortValue,
-                    isDescending, pageable
-                );
-                case "employeeNumber" -> employeeRepository.findEmployeesWithCursorByEmployeeNumber(
-                    nameOrEmail, departmentName, position, employeeNumber,
-                    hireDateFrom, hireDateTo, status, idAfter, (String) lastSortValue,
-                    isDescending, pageable
-                );
-
-                default -> throw new InvalidRequestException("지원하지 않는 정렬 기준입니다: " + sortField);
-            };
-        } catch (Exception e) {
-            throw new RuntimeException("직원 목록 조회 중 오류가 발생했습니다.", e);
-        }
-    }
-
-    /**
-     * 이전 페이지의 마지막 정렬 값을 추출
-     */
-    private Object extractLastSortValue(Long idAfter, String sortField) {
-        if (idAfter == null) {
+            return new String(decodedBytes, StandardCharsets.UTF_8);
+        } catch (IllegalArgumentException e) {
+            // 잘못된 커서 형식일 경우 null 반환 (처음부터 조회)
             return null;
         }
+    }
 
-        // 이전 페이지 마지막 직원 정보 조회
-        Optional<Employee> lastEmployee = employeeRepository.findById(idAfter);
-        if (lastEmployee.isEmpty()) {
-            return null;
+    /**
+     * 커서 페이지 응답 객체 생성
+     */
+    private CursorPageResponseEmployeeDto buildCursorPageResponse(
+        List<Employee> employees,
+        int pageSize,
+        EmployeeSearchRequest request) {
+
+        // 다음 페이지 존재 여부 확인
+        boolean hasNextPage = employees.size() > pageSize;
+
+        // 실제 반환할 데이터 (다음 페이지 확인용 +1 제거)
+        List<Employee> actualContent = extractActualContent(employees, pageSize, hasNextPage);
+
+        // 전체 개수 조회
+        long totalElements = employeeRepository.countEmployeesWithConditions(
+            request.nameOrEmail(),        // String nameOrEmail
+            request.departmentName(),     // String departmentName
+            request.position(),           // String position
+            request.employeeNumber(),     // String employeeNumber
+            request.hireDateFrom(),       // LocalDate hireDateFrom
+            request.hireDateTo(),         // LocalDate hireDateTo
+            request.status()              // EmployeeStatus status
+        );
+
+        // 다음 페이지 정보 생성
+        NextPageInfo nextPageInfo = createNextPageInfo(actualContent, pageSize, hasNextPage, request);
+
+        // DTO 변환
+        List<EmployeeDto> employeeDtos = convertToEmployeeDtos(actualContent);
+
+        return new CursorPageResponseEmployeeDto(
+            employeeDtos,
+            nextPageInfo.cursor(),
+            nextPageInfo.idAfter(),
+            pageSize,
+            totalElements,
+            hasNextPage
+        );
+    }
+
+    /**
+     * 실제 반환할 콘텐츠 추출 (페이지 크기만큼만)
+     */
+    private List<Employee> extractActualContent(List<Employee> employees, int pageSize, boolean hasNextPage) {
+        return hasNextPage ? employees.subList(0, pageSize) : employees;
+    }
+
+    /**
+     * 다음 페이지 정보 생성
+     */
+    private NextPageInfo createNextPageInfo(
+        List<Employee> content,
+        int pageSize,
+        boolean hasNextPage,
+        EmployeeSearchRequest request) {
+
+        if (!hasNextPage || content.isEmpty()) {
+            return new NextPageInfo(null, null);
         }
 
-        Employee employee = lastEmployee.get();
+        Employee lastEmployee = content.get(pageSize - 1);
+        String nextCursor = generateEncodedCursor(lastEmployee, request.sortField());
+        Long nextIdAfter = lastEmployee.getId();
+
+        return new NextPageInfo(nextCursor, nextIdAfter);
+    }
+
+    /**
+     * Employee 리스트를 EmployeeDto 리스트로 변환
+     */
+    private List<EmployeeDto> convertToEmployeeDtos(List<Employee> employees) {
+        return employees.stream()
+            .map(employeeMapper::toDto)
+            .toList();
+    }
+
+    /**
+     * 커서 값 생성 및 Base64 인코딩
+     *
+     * @param employee 마지막 직원 정보
+     * @param sortField 정렬 기준 필드
+     * @return Base64로 인코딩된 커서
+     */
+    private String generateEncodedCursor(Employee employee, String sortField) {
+        String cursorValue = extractCursorValue(employee, sortField);
+        return Base64.getEncoder().encodeToString(
+            cursorValue.getBytes(StandardCharsets.UTF_8)
+        );
+    }
+
+    /**
+     * 정렬 필드에 따른 커서 값 추출
+     */
+    private String extractCursorValue(Employee employee, String sortField) {
         return switch (sortField) {
-            case "name" -> employee.getName();
-            case "hireDate" -> employee.getHireDate();
+            case "hireDate" -> employee.getHireDate().toString();
             case "employeeNumber" -> employee.getEmployeeNumber();
-            default -> null;
-        };
-    }
-
-    /**
-     * 다음 페이지를 위한 커서 생성
-     * 커서는 마지막 요소의 정렬 값과 ID를 Base64로 인코딩한 문자열
-     */
-    private String generateNextCursor(Employee lastEmployee, String sortField) {
-        try {
-            // 커서 정보를 담을 Map 생성
-            var cursorInfo = new java.util.HashMap<String, Object>();
-            cursorInfo.put("id", lastEmployee.getId());
-            cursorInfo.put("sortField", sortField);
-
-            // 정렬 기준에 따라 값 추가
-            switch (sortField) {
-                case "name" -> cursorInfo.put("sortValue", lastEmployee.getName());
-                case "hireDate" -> cursorInfo.put("sortValue", lastEmployee.getHireDate().toString());
-                case "employeeNumber" -> cursorInfo.put("sortValue", lastEmployee.getEmployeeNumber());
-                default -> throw new InvalidRequestException("지원하지 않는 정렬 기준입니다: " + sortField);
+            case "name" -> employee.getName();
+            default -> {
+                // 예상치 못한 정렬 필드일 경우 기본값으로 name 사용
+                yield employee.getName();
             }
-
-            // JSON으로 직렬화 후 Base64 인코딩
-            String json = objectMapper.writeValueAsString(cursorInfo);
-            return Base64.getEncoder().encodeToString(json.getBytes(StandardCharsets.UTF_8));
-
-        } catch (Exception e) {
-            throw new RuntimeException("커서 생성 실패", e);
-        }
+        };
     }
 
     /**
@@ -464,5 +399,16 @@ public class BasicEmployeeService implements EmployeeService {
             // 파일 삭제 실패해도 직원 삭제는 계속 진행
             System.err.println("프로필 이미지 파일 삭제 실패: " + e.getMessage());
         }
+    }
+
+    // =================================================================
+    // 내부 클래스 - 다음 페이지 정보를 담는 레코드
+    // =================================================================
+
+    /**
+     * 다음 페이지 정보를 담는 내부 레코드
+     * - 코드의 가독성을 높이고 매개변수 전달을 간소화
+     */
+    private record NextPageInfo(String cursor, Long idAfter) {
     }
 }
