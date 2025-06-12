@@ -101,6 +101,16 @@ ORDER BY d.establishedDate ASC, d.id ASC
     List<Department> findByCursorDateAscWithoutCursor(
         @Param("nameOrDescription") String nameOrDescription,
         Pageable pageable
+    );    // 커서가 없을 때는 모든 데이터를 가져옴
+    @Query("""
+SELECT d FROM Department d
+WHERE
+    (:nameOrDescription IS NULL OR d.name LIKE %:nameOrDescription% OR d.description LIKE %:nameOrDescription%)
+ORDER BY d.establishedDate DESC , d.id DESC
+""")
+    List<Department> findByCursorDateDescWithoutCursor(
+        @Param("nameOrDescription") String nameOrDescription,
+        Pageable pageable
     );
     // name이나 description에 검색어가 포함된 개수 반환
     @Query("SELECT COUNT(d) FROM Department d WHERE d.name LIKE %:keyword% OR d.description LIKE %:keyword%")
